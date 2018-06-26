@@ -38,13 +38,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ";
 
-pub fn get_template(ident: &str) -> &str {
-    match ident {
+pub fn get_template(ident: &str) -> String {
+    let template = match ident {
         "short-ident" => SHORT_IDENT,
         "GPL-3.0" => GPLV3,
         "AGPL-3.0" => AGPLV3,
         _ => SHORT_IDENT,
-    }
+    };
+
+    template.to_string()
 }
 
 pub fn render_template(ident: &str, author: &str, email: &str, year: &str) -> String {
