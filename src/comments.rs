@@ -66,11 +66,14 @@ impl Comment for LineComment {
         let lines = local_copy.split("\n");
         let mut new_text = "".to_string();
         for line in lines {
-            if line == "" && self.skip_empty_lines {
-                continue;
-            }
+            let new_line;
 
-            let new_line = format!("{} {}\n", self.character, line);
+            match line {
+                "" if self.skip_empty_lines => continue,
+                "" => new_line = format!("{}\n", self.character),
+                _ => new_line = format!("{} {}\n", self.character, line),
+            };
+
             new_text.push_str(&new_line);
         }
 
@@ -86,6 +89,15 @@ pub fn get_commenter(ftype: &str) -> Box<Comment> {
         "cpp" => Box::new(BlockComment::new("/*\n", "*/").with_per_line("*")),
         "c" => Box::new(BlockComment::new("/*\n", "*/").with_per_line("*")),
         _ => Box::new(LineComment::new("#")),
+    }
+}
+
+// get_filetype returns the filetype as expected by get_commenter
+pub fn get_filetype(filename: &str) -> String {
+    let iter = filename.split(".");
+    match iter.last() {
+        Some(s) => s.to_string(),
+        None => "".to_string(),
     }
 }
 
@@ -119,10 +131,14 @@ it looked super dapper
 * with a very nice cat
 * the cat wore a top hat
 * it looked super dapper
-* 
+*
 */",
             get_commenter("cpp").comment(EX_TEXT)
         )
     }
 
+    #[test]
+    fn test_get_filetype() {
+        assert_eq!("py", get_filetype("test.py"))
+    }
 }
