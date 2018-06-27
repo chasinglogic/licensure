@@ -17,7 +17,7 @@ use clap::{App, Arg, SubCommand};
 use licensure::comments;
 use licensure::licenses::Config;
 
-const DEFAULT_PATTERNS = "(.gitignore|.*lock)"
+const DEFAULT_PATTERNS = "(\\.gitignore|.*lock|\\.licensure\\.yml)"
 
 fn get_project_files() -> Box<Vec<String>> {
     match Command::new("git").arg("ls-files").output() {
