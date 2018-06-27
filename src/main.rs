@@ -26,6 +26,7 @@ fn get_project_files() -> Box<Vec<String>> {
         String::from_utf8(ls_files_output.stdout)
             .unwrap()
             .split("\n")
+            .filter(|s| *s != "")
             .map(str::to_string)
             .collect(),
     )
