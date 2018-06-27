@@ -13,7 +13,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 pub trait Comment {
     fn comment(&self, text: &str) -> String;
 }
@@ -101,6 +100,7 @@ pub fn get_commenter(ftype: &str) -> Box<Comment> {
         "js" => Box::new(LineComment::new("//")),
         "go" => Box::new(LineComment::new("//")),
         "html" => Box::new(BlockComment::new("<!--\n", "-->")),
+        "css" => Box::new(BlockComment::new("/*\n", "*/").with_per_line("*")),
         "cpp" => Box::new(BlockComment::new("/*\n", "*/").with_per_line("*")),
         "c" => Box::new(BlockComment::new("/*\n", "*/").with_per_line("*")),
         _ => Box::new(LineComment::new("#")),
