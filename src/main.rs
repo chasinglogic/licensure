@@ -112,22 +112,25 @@ fn main() {
         .author("Mathew Robinson <chasinglogic@gmail.com>")
         .about(
             "
-Manage FOSS licenses in your projects.
+Manage licenses in your projects.
 
-Copyright (C) 2018 Mathew Robinson <chasinglogic@gmail.com>
+Copyright 2018 Mathew Robinson <chasinglogic@gmail.com>. All rights reserved.
 
 This program is free software: you can redistribute it and/or modify
-it under the terms of the Apache Version 2.0 License
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
 
-You should have recieved a copy of the license with this software if
-not you can view it here: https://www.apache.org/licenses/LICENSE-2.0",
-        )
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.")
         .subcommand(
             SubCommand::with_name("license")
+                .about("Apply license headers to source files")
                 .arg(Arg::with_name("short").short("s").long("short"))
                 .arg(
                     Arg::with_name("project")
