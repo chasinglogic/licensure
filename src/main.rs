@@ -1,15 +1,28 @@
-extern crate chrono;
 extern crate clap;
 extern crate licensure;
 
-use chrono::prelude::*;
+use std::fs::File;
+use std::io::prelude::*;
+use std::io::Error;
+use std::process;
+
 use clap::{App, Arg, SubCommand};
 
-struct Config {
-    author: String,
-    email: String,
-    year: String,
-    ident: String,
+use licensure::comments;
+use licensure::licenses::Config;
+
+pub fn license_file(filename: &str, uncommented: &str) -> Result<(), Error> {
+    let mut f = File::open(filename)?;
+    let mut content = String::new();
+    f.read_to_string(&mut content)?;
+
+    let filetype = comments::get_filetype(&filename);
+    let commenter = comments::get_commenter(&filetype);
+    let mut header = commenter.comment(uncommented);
+    header.push_str(&content);
+
+    f = File::create(filename)?;
+    f.write_all(header.as_bytes()).map(|_x| ())
 }
 
 fn main() {
@@ -69,46 +82,46 @@ not you can view it here: https://www.apache.org/licenses/LICENSE-2.0",
 
     match matches.subcommand() {
         ("license", Some(args)) => {
-            let files: Vec<String>;
+            let files: Vec<String> = args.values_of("FILES")
+                .expect("ERROR: Must provide files to license either as args or via --project")
+                .map(str::to_string)
+                .collect();
 
-            if args.is_present("project") {
-                files = licensure::utils::get_project_files();
+            let author = if let Some(author) = args.value_of("autho") {
+                author
             } else {
-                files = args
-                    .values_of("FILES")
-                    .expect("ERROR: Must provide files to license either as args or via --project")
-                    .map(str::to_string)
-                    .collect();
-            }
-
-            let now;
-            let year_string;
-            let config = Config {
-                author: args
-                    .value_of("author")
-                    .expect("--author is a required flag"),
-                email: args.value_of("email").expect("--email is a required flag"),
-                ident: args.value_of("ident").expect("--ident is a required flag"),
-                year: if let Some(year) = args.value_of("year") {
-                    year
-                } else {
-                    now = Local::now();
-                    year_string = now.year().to_string();
-                    &year_string
-                },
+                println!("ERROR: --author is a required flag");
+                process::exit(1);
             };
 
+            let ident = if let Some(ident) = args.value_of("ident") {
+                ident
+            } else {
+                println!("ERROR: --ident is a required flag");
+                process::exit(1);
+            };
+
+            let mut config = Config::new(ident, author);
+
+            if let Some(email) = args.value_of("email") {
+                config = config.with_email(email.to_string());
+            }
+
+            if let Some(year) = args.value_of("year") {
+                config = config.with_year(year.to_string());
+            }
+
+            let header = config.render();
             for file in files {
                 println!("Licensing file: {}", file);
-                licensure::ops::license_file(
-                    &file,
-                    &config.ident,
-                    &config.author,
-                    &config.email,
-                    &config.year,
-                );
+                if let Err(err) = license_file(&file, &header) {
+                    println!("{}", err);
+                }
             }
         }
-        _ => println!("ERROR: Unknown command"),
+        _ => {
+            println!("ERROR: Unknown command");
+            process::exit(1);
+        }
     }
 }
