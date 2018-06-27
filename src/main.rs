@@ -13,7 +13,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 extern crate clap;
 extern crate licensure;
 extern crate regex;
@@ -242,5 +241,15 @@ not you can view it here: https://www.apache.org/licenses/LICENSE-2.0",
             println!("ERROR: Unknown command");
             process::exit(1);
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_get_project_files() {
+        assert!(get_project_files().len() != 0)
     }
 }
