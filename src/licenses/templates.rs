@@ -1,10 +1,8 @@
 pub const SHORT_IDENT: &str =
-    "Copyright {year} {author} <{email}>. All rights reserved. Use of this source code is
-governed by the {ident} license that can be found in the LICENSE file.
+    "Copyright {year} {author}{email}. All rights reserved. Use of this source code is
+governed by the {ident} license that can be found in the LICENSE file.";
 
-";
-
-pub const AGPLV3: &str = "Copyright {year} {author} <{email}>. All rights reserved.
+pub const AGPLV3: &str = "Copyright {year} {author}{email}. All rights reserved.
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -17,11 +15,9 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
+along with this program.  If not, see <http://www.gnu.org/licenses/>.";
 
-";
-
-pub const GPLV3: &str = "Copyright {year} {author} <{email}>. All rights reserved.
+pub const GPLV3: &str = "Copyright {year} {author}{email}. All rights reserved.
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -34,6 +30,4 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-";
+along with this program.  If not, see <http://www.gnu.org/licenses/>.";
