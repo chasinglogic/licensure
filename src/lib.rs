@@ -6,4 +6,3 @@ extern crate serde_yaml;
 
 pub mod comments;
 pub mod licenses;
-pub mod utils;

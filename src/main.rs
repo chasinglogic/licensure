@@ -4,15 +4,32 @@ extern crate serde_yaml;
 
 use std::env;
 use std::fs::File;
+use std::io;
 use std::io::prelude::*;
 use std::io::Error;
 use std::path::PathBuf;
 use std::process;
+use std::process::Command;
 
 use clap::{App, Arg, SubCommand};
 
 use licensure::comments;
 use licensure::licenses::Config;
+
+fn get_project_files() -> Box<Vec<String>> {
+    let ls_files_output = Command::new("git")
+        .arg("ls-files")
+        .output()
+        .expect("Failed to run git ls-files. Make sure you're in a git repo.");
+
+    Box::new(
+        String::from_utf8(ls_files_output.stdout)
+            .unwrap()
+            .split("\n")
+            .map(str::to_string)
+            .collect(),
+    )
+}
 
 fn find_config_file() -> Option<PathBuf> {
     if let Ok(mut cwd) = env::current_dir() {
@@ -53,6 +70,14 @@ fn license_file(filename: &str, uncommented: &str) -> Result<(), Error> {
     let filetype = comments::get_filetype(&filename);
     let commenter = comments::get_commenter(&filetype);
     let mut header = commenter.comment(uncommented);
+
+    if content.contains(&header) {
+        return Err(io::Error::new(
+            io::ErrorKind::AlreadyExists,
+            format!("{} already licensed", filename),
+        ));
+    }
+
     header.push_str(&content);
 
     f = File::create(filename)?;
@@ -116,11 +141,14 @@ not you can view it here: https://www.apache.org/licenses/LICENSE-2.0",
 
     match matches.subcommand() {
         ("license", Some(args)) => {
-            let files: Vec<String> = args
-                .values_of("FILES")
-                .expect("ERROR: Must provide files to license either as args or via --project")
-                .map(str::to_string)
-                .collect();
+            let files: Vec<String> = if args.is_present("project") {
+                *get_project_files()
+            } else {
+                args.values_of("FILES")
+                    .expect("ERROR: Must provide files to license either as args or via --project")
+                    .map(str::to_string)
+                    .collect()
+            };
 
             let mut config = match find_config_file() {
                 Some(file) => {
