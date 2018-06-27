@@ -5,6 +5,7 @@ version = "0.1.0"
 keywords = ["licensing", "cli", "tool", "license"]
 license = "GPL-3.0"
 readme = "README.md"
+description = "A software license management tool"
 repository = "https://github.com/chasinglogic/licensure"
 homepage = "https://github.com/chasinglogic/licensure"
 
