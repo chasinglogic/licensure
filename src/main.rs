@@ -1,9 +1,12 @@
 extern crate clap;
 extern crate licensure;
+extern crate serde_yaml;
 
+use std::env;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::Error;
+use std::path::PathBuf;
 use std::process;
 
 use clap::{App, Arg, SubCommand};
@@ -11,7 +14,38 @@ use clap::{App, Arg, SubCommand};
 use licensure::comments;
 use licensure::licenses::Config;
 
-pub fn license_file(filename: &str, uncommented: &str) -> Result<(), Error> {
+fn find_config_file() -> Option<PathBuf> {
+    if let Ok(mut cwd) = env::current_dir() {
+        loop {
+            cwd.push(".git");
+            if cwd.exists() {
+                cwd.pop();
+                cwd.push(".licensure.yml");
+                break;
+            }
+
+            if !cwd.pop() {
+                break;
+            }
+        }
+
+        if cwd.exists() {
+            return Some(cwd);
+        }
+    }
+
+    if let Some(mut global) = env::home_dir() {
+        global.push(".licensure");
+        global.push("config.yml");
+        if global.exists() {
+            return Some(global);
+        }
+    }
+
+    None
+}
+
+fn license_file(filename: &str, uncommented: &str) -> Result<(), Error> {
     let mut f = File::open(filename)?;
     let mut content = String::new();
     f.read_to_string(&mut content)?;
@@ -82,33 +116,42 @@ not you can view it here: https://www.apache.org/licenses/LICENSE-2.0",
 
     match matches.subcommand() {
         ("license", Some(args)) => {
-            let files: Vec<String> = args.values_of("FILES")
+            let files: Vec<String> = args
+                .values_of("FILES")
                 .expect("ERROR: Must provide files to license either as args or via --project")
                 .map(str::to_string)
                 .collect();
 
-            let author = if let Some(author) = args.value_of("autho") {
-                author
-            } else {
+            let mut config = match find_config_file() {
+                Some(file) => {
+                    let mut f = File::open(file).expect("FAIL");
+                    let mut content = String::new();
+                    f.read_to_string(&mut content).expect("FAIL");
+                    serde_yaml::from_str(&content).unwrap()
+                }
+                None => Config::new("", ""),
+            };
+
+            if let Some(author) = args.value_of("author") {
+                config.author = author.to_string();
+            } else if &config.author == "" {
                 println!("ERROR: --author is a required flag");
                 process::exit(1);
             };
 
-            let ident = if let Some(ident) = args.value_of("ident") {
-                ident
-            } else {
+            if let Some(ident) = args.value_of("ident") {
+                config.ident = ident.to_string();
+            } else if &config.ident == "" {
                 println!("ERROR: --ident is a required flag");
                 process::exit(1);
             };
 
-            let mut config = Config::new(ident, author);
-
             if let Some(email) = args.value_of("email") {
-                config = config.with_email(email.to_string());
+                config = config.with_email(email);
             }
 
             if let Some(year) = args.value_of("year") {
-                config = config.with_year(year.to_string());
+                config = config.with_year(year);
             }
 
             let header = config.render();
