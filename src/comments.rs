@@ -29,7 +29,7 @@ impl Comment for BlockComment {
 
         match self.per_line {
             Some(ref comment_char) => {
-                let lc = LineComment::new(comment_char).comment_empty_lines();
+                let lc = LineComment::new(comment_char).skip_trailing_lines();
                 let commented_text = lc.comment(text);
                 new_text.push_str(&commented_text);
             }
@@ -43,19 +43,19 @@ impl Comment for BlockComment {
 
 pub struct LineComment {
     character: String,
-    skip_empty_lines: bool,
+    no_trailing_lines: bool,
 }
 
 impl LineComment {
     fn new(character: &str) -> LineComment {
         LineComment {
             character: String::from(character),
-            skip_empty_lines: true,
+            no_trailing_lines: false,
         }
     }
 
-    fn comment_empty_lines(mut self) -> LineComment {
-        self.skip_empty_lines = false;
+    fn skip_trailing_lines(mut self) -> LineComment {
+        self.no_trailing_lines = true;
         self
     }
 }
@@ -66,15 +66,14 @@ impl Comment for LineComment {
         let lines = local_copy.split("\n");
         let mut new_text = "".to_string();
         for line in lines {
-            let new_line;
+            new_text.push_str(&match line {
+                "" => format!("{}\n", self.character),
+                _ => format!("{} {}\n", self.character, line),
+            });
+        }
 
-            match line {
-                "" if self.skip_empty_lines => continue,
-                "" => new_line = format!("{}\n", self.character),
-                _ => new_line = format!("{} {}\n", self.character, line),
-            };
-
-            new_text.push_str(&new_line);
+        if !self.no_trailing_lines {
+            new_text.push_str("\n\n");
         }
 
         new_text
@@ -85,6 +84,7 @@ pub fn get_commenter(ftype: &str) -> Box<Comment> {
     match ftype {
         "rs" => Box::new(LineComment::new("//")),
         "js" => Box::new(LineComment::new("//")),
+        "go" => Box::new(LineComment::new("//")),
         "html" => Box::new(BlockComment::new("<!--\n", "-->")),
         "cpp" => Box::new(BlockComment::new("/*\n", "*/").with_per_line("*")),
         "c" => Box::new(BlockComment::new("/*\n", "*/").with_per_line("*")),
@@ -118,6 +118,9 @@ it looked super dapper
 # with a very nice cat
 # the cat wore a top hat
 # it looked super dapper
+#
+
+
 ",
             get_commenter("py").comment(EX_TEXT)
         )
