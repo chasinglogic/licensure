@@ -5,7 +5,7 @@ pub trait Comment {
 pub struct BlockComment {
     start: String,
     end: String,
-    per_line: Option<String>,
+    per_line: Option<Box<Comment>>,
 }
 
 impl BlockComment {
@@ -18,7 +18,7 @@ impl BlockComment {
     }
 
     fn with_per_line(mut self, per_line: &str) -> BlockComment {
-        self.per_line = Some(String::from(per_line));
+        self.per_line = Some(Box::new(LineComment::new(per_line).skip_trailing_lines()));
         self
     }
 }
@@ -28,9 +28,8 @@ impl Comment for BlockComment {
         let mut new_text = self.start.clone();
 
         match self.per_line {
-            Some(ref comment_char) => {
-                let lc = LineComment::new(comment_char).skip_trailing_lines();
-                let commented_text = lc.comment(text);
+            Some(ref commenter) => {
+                let commented_text = commenter.comment(text);
                 new_text.push_str(&commented_text);
             }
             None => new_text.push_str(text),
