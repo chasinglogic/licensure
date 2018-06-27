@@ -2,6 +2,14 @@
 authors = ["Mathew Robinson <chasinglogic@gmail.com>"]
 name = "licensure"
 version = "0.1.0"
+keywords = ["licensing", "cli", "tool", "license"]
+license = "GPL-3.0"
+readme = "README.md"
+repository = "https://github.com/chasinglogic/licensure"
+homepage = "https://github.com/chasinglogic/licensure"
+
+[badges]
+travis-ci = { repository = "chasinglogic/licensure", branch = "master" }
 
 [dependencies]
 chrono = "0.4.2"
