@@ -17,19 +17,21 @@ use licensure::comments;
 use licensure::licenses::Config;
 
 fn get_project_files() -> Box<Vec<String>> {
-    let ls_files_output = Command::new("git")
-        .arg("ls-files")
-        .output()
-        .expect("Failed to run git ls-files. Make sure you're in a git repo.");
-
-    Box::new(
-        String::from_utf8(ls_files_output.stdout)
-            .unwrap()
-            .split("\n")
-            .filter(|s| *s != "")
-            .map(str::to_string)
-            .collect(),
-    )
+    match Command::new("git").arg("ls-files").output() {
+        Ok(proc) => Box::new(
+            String::from_utf8(proc.stdout)
+                .unwrap()
+                .split("\n")
+                .filter(|s| *s != "")
+                .map(str::to_string)
+                .collect(),
+        ),
+        Err(e) => {
+            println!("Failed to run git ls-files. Make sure you're in a git repo.");
+            println!("{}", e);
+            process::exit(1)
+        }
+    }
 }
 
 fn find_config_file() -> Option<PathBuf> {
