@@ -33,7 +33,7 @@ use regex::Regex;
 use licensure::comments;
 use licensure::licenses::Config;
 
-const DEFAULT_PATTERNS: &'static str = "(\\.gitignore|.*lock|\\.licensure\\.yml)";
+const DEFAULT_PATTERNS: &'static str = "(\\.gitignore|.*lock|\\.licensure\\.yml|README.*)";
 
 fn get_project_files() -> Box<Vec<String>> {
     match Command::new("git").arg("ls-files").output() {
@@ -132,6 +132,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.")
             SubCommand::with_name("license")
                 .about("Apply license headers to source files")
                 .arg(
+                    Arg::with_name("exclude")
+                     .short("e")
+                     .long("exclude")
+                     .takes_value(true)
+                     .value_name("REGEX")
+                     .help("A regex which will be used to determine what files to ignore.")
+                )
+                .arg(
                     Arg::with_name("project")
                         .long("project")
                         .short("p")
@@ -155,7 +163,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.")
                 )
                 .arg(
                     Arg::with_name("email")
-                        .short("e")
+                        .short("m")
                         .long("email")
                         .takes_value(true)
                         .value_name("AUTHOR_EMAIL")
