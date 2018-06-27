@@ -1,5 +1,4 @@
 use chrono::prelude::*;
-use regex::Regex;
 
 mod templates;
 use self::templates::*;
@@ -20,6 +19,7 @@ impl Config {
             author: author.to_string(),
             email: None,
             year: Some(Local::now().year().to_string()),
+            excludes: None,
         }
     }
 
@@ -30,6 +30,11 @@ impl Config {
 
     pub fn with_year(mut self, year: &str) -> Config {
         self.year = Some(year.to_string());
+        self
+    }
+
+    pub fn with_excludes(mut self, patterns: Vec<String>) -> Config {
+        self.excludes = Some(patterns);
         self
     }
 
@@ -71,9 +76,9 @@ impl Config {
 
     pub fn exclude_pat(&self) -> String {
         match self.excludes {
-            Some(patterns) => {
-                let pat = "(".to_string();
-                pat.push_str(patterns.join("|"));
+            Some(ref patterns) => {
+                let mut pat = "(".to_string();
+                pat.push_str(&patterns.join("|"));
                 pat.push_str(")");
                 pat
             }

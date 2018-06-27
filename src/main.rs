@@ -1,7 +1,7 @@
 extern crate clap;
 extern crate licensure;
-extern crate serde_yaml;
 extern crate regex;
+extern crate serde_yaml;
 
 use std::env;
 use std::fs::File;
@@ -13,11 +13,12 @@ use std::process;
 use std::process::Command;
 
 use clap::{App, Arg, SubCommand};
+use regex::Regex;
 
 use licensure::comments;
 use licensure::licenses::Config;
 
-const DEFAULT_PATTERNS = "(\\.gitignore|.*lock|\\.licensure\\.yml)"
+const DEFAULT_PATTERNS: &'static str = "(\\.gitignore|.*lock|\\.licensure\\.yml)";
 
 fn get_project_files() -> Box<Vec<String>> {
     match Command::new("git").arg("ls-files").output() {
@@ -188,22 +189,29 @@ not you can view it here: https://www.apache.org/licenses/LICENSE-2.0",
                 config = config.with_year(year);
             }
 
-            let final_pat = DEFAULT_PATTERNS.to_string();
+            let mut final_pat = DEFAULT_PATTERNS.to_string();
             if let Some(exclude) = args.value_of("exclude") {
                 final_pat.push_str("|");
                 final_pat.push_str(exclude);
             }
 
-            let cfg_pat = config.exlude_pat();
+            let cfg_pat = config.exclude_pat();
             if cfg_pat != "" {
                 final_pat.push_str("|");
-                final_pat.push_str(cfg_pat);
+                final_pat.push_str(&cfg_pat);
             }
 
-            let rgx = Regex::new(final_pat);
+            let rgx = match Regex::new(&final_pat) {
+                Ok(r) => r,
+                Err(e) => {
+                    println!("ERROR: Unable to compile regex: {}", e);
+                    process::exit(1);
+                }
+            };
+
             let header = config.render();
             for file in files {
-                if rgx.is_match(file) {
+                if rgx.is_match(&file) {
                     println!("Skipping excluded file: {}", file);
                     continue;
                 }
