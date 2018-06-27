@@ -60,16 +60,16 @@ fn find_config_file() -> Option<PathBuf> {
             if cwd.exists() {
                 cwd.pop();
                 cwd.push(".licensure.yml");
-                break;
+                return Some(cwd);
             }
 
+            // Pop the .git directory we added
+            cwd.pop();
+
+            // Move up a directory checking if we have hit root yet
             if !cwd.pop() {
                 break;
             }
-        }
-
-        if cwd.exists() {
-            return Some(cwd);
         }
     }
 
@@ -141,18 +141,24 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.")
                     Arg::with_name("ident")
                         .short("i")
                         .long("ident")
+                        .takes_value(true)
+                        .value_name("SPDX_IDENTIFIER")
                         .help("SPDX license identifier to license files with."),
                 )
                 .arg(
                     Arg::with_name("author")
                         .short("a")
                         .long("author")
+                        .takes_value(true)
+                        .value_name("AUTHOR_NAME")
                         .help("Full name of copyright owner / source code author.")
                 )
                 .arg(
                     Arg::with_name("email")
                         .short("e")
                         .long("email")
+                        .takes_value(true)
+                        .value_name("AUTHOR_EMAIL")
                         .help("Email of the copyright owner / source code author.")
                 )
                 .arg(
