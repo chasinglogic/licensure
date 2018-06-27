@@ -131,7 +131,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.")
         .subcommand(
             SubCommand::with_name("license")
                 .about("Apply license headers to source files")
-                .arg(Arg::with_name("short").short("s").long("short"))
                 .arg(
                     Arg::with_name("project")
                         .long("project")
