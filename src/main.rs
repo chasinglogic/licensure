@@ -108,7 +108,7 @@ fn license_file(filename: &str, uncommented: &str) -> Result<(), Error> {
 
 fn main() {
     let matches = App::new("licensure")
-        .version("0.1.0")
+        .version("0.1.1")
         .author("Mathew Robinson <chasinglogic@gmail.com>")
         .about(
             "

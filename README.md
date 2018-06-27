@@ -126,7 +126,7 @@ problems running licensure please open an
 [issue](https://github.com/chasinglogic/licensure/issues).
 
 ```text
-licensure 0.1.0
+licensure 0.1.1
 Mathew Robinson <chasinglogic@gmail.com>
 
 Manage licenses in your projects.
