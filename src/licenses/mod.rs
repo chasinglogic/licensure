@@ -1,4 +1,5 @@
 use chrono::prelude::*;
+use regex::Regex;
 
 mod templates;
 use self::templates::*;
@@ -9,6 +10,7 @@ pub struct Config {
     pub author: String,
     pub year: Option<String>,
     pub email: Option<String>,
+    pub excludes: Option<Vec<String>>,
 }
 
 impl Config {
@@ -65,6 +67,18 @@ impl Config {
         };
 
         template.to_string()
+    }
+
+    pub fn exclude_pat(&self) -> String {
+        match self.excludes {
+            Some(patterns) => {
+                let pat = "(".to_string();
+                pat.push_str(patterns.join("|"));
+                pat.push_str(")");
+                pat
+            }
+            None => "".to_string(),
+        }
     }
 }
 

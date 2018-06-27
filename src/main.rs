@@ -1,6 +1,7 @@
 extern crate clap;
 extern crate licensure;
 extern crate serde_yaml;
+extern crate regex;
 
 use std::env;
 use std::fs::File;
@@ -15,6 +16,8 @@ use clap::{App, Arg, SubCommand};
 
 use licensure::comments;
 use licensure::licenses::Config;
+
+const DEFAULT_PATTERNS = "(.gitignore|.*lock)"
 
 fn get_project_files() -> Box<Vec<String>> {
     match Command::new("git").arg("ls-files").output() {
@@ -185,8 +188,26 @@ not you can view it here: https://www.apache.org/licenses/LICENSE-2.0",
                 config = config.with_year(year);
             }
 
+            let final_pat = DEFAULT_PATTERNS.to_string();
+            if let Some(exclude) = args.value_of("exclude") {
+                final_pat.push_str("|");
+                final_pat.push_str(exclude);
+            }
+
+            let cfg_pat = config.exlude_pat();
+            if cfg_pat != "" {
+                final_pat.push_str("|");
+                final_pat.push_str(cfg_pat);
+            }
+
+            let rgx = Regex::new(final_pat);
             let header = config.render();
             for file in files {
+                if rgx.is_match(file) {
+                    println!("Skipping excluded file: {}", file);
+                    continue;
+                }
+
                 println!("Licensing file: {}", file);
                 if let Err(err) = license_file(&file, &header) {
                     println!("{}", err);
