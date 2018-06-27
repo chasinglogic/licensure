@@ -7,6 +7,7 @@ A software license management CLI
 - [Usage](#usage)
   - [Example](#example)
   - [Supported Filetypes](#supported-filetypes)
+- [Configuration](#configuration)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -164,19 +165,70 @@ licensure-license
 Apply license headers to source files
 
 USAGE:
-    licensure license [FLAGS] [FILES]...
+    licensure license [FLAGS] [OPTIONS] [FILES]...
 
 FLAGS:
-    -a, --author     Full name of copyright owner / source code author.
-    -e, --email      Email of the copyright owner / source code author.
     -h, --help       Prints help information
-    -i, --ident      SPDX license identifier to license files with.
     -p, --project    When specified will license the current project files as returned by git ls-files
     -V, --version    Prints version information
+
+OPTIONS:
+    -a, --author <AUTHOR_NAME>       Full name of copyright owner / source code author.
+    -m, --email <AUTHOR_EMAIL>       Email of the copyright owner / source code author.
+    -e, --exclude <REGEX>            A regex which will be used to determine what files to ignore.
+    -i, --ident <SPDX_IDENTIFIER>    SPDX license identifier to license files with.
 
 ARGS:
     <FILES>...    Files to license, ignored if --project is supplied
 ```
+
+## Configuration
+
+Specifying the author, license identifier, and other flags to licensure every
+time can be tedious and error prone. To help with this licensure supports the
+use of a configuration file so you can specify these options.
+
+**Note:** All arguments given as flags will overwrite the values in a config
+file if found, with the exception of excludes. Excludes will be joined with any
+found in a config file.
+
+The configuration file is written in yaml and is searched for in two locations.
+First, it will look for a file named `.licensure.yml` in the root of your git
+repository. Second, it will look for a global configuration file located at
+`$HOME/.licensure/config.yml`.
+
+The required keys for the configuration file are the same as the required
+command line flags, author and ident:
+
+```yaml
+author: Mathew Robinson
+ident: Apache-2.0
+```
+
+You can also specify an author email:
+
+```yaml
+author: Mathew Robinson
+ident: Apache-2.0
+email: chasinglogic@gmail.com
+```
+
+Additionally you can add excludes which is a yaml list of regexes which
+licensure will logical or together and combine with the default excludes. For
+example if you want to exclude the Cargo.toml from getting a license header: 
+
+```yaml
+author: Mathew Robinson
+ident: Apache-2.0
+email: chasinglogic@gmail.com
+excludes:
+  - Cargo.toml
+```
+
+You can use regexes as supported by the 
+[regex crate](https://docs.rs/regex/1.0.1/regex/) to make more complicated
+matches. By default licensure will ignore any files ending with "lock", the
+".gitignore" file, the README and the LICENSE file.
 
 ## Contributing
 
