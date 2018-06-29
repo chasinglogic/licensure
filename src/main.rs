@@ -33,7 +33,8 @@ use regex::Regex;
 use licensure::comments;
 use licensure::licenses::Config;
 
-const DEFAULT_PATTERNS: &'static str = "(\\.gitignore|.*lock|\\.licensure\\.yml|README.*)";
+const DEFAULT_PATTERNS: &'static str =
+    "(\\.gitignore|.*lock|\\.licensure\\.yml|README.*|LICENSE.*)";
 
 fn get_project_files() -> Box<Vec<String>> {
     match Command::new("git").arg("ls-files").output() {
