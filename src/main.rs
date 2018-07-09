@@ -85,6 +85,17 @@ fn find_config_file() -> Option<PathBuf> {
     None
 }
 
+fn should_license_file(filename: &str, content: &str, header: &str) -> Result<(), Error> {
+    if content.contains(&header) {
+        return Err(io::Error::new(
+            io::ErrorKind::AlreadyExists,
+            format!("{} already licensed", filename),
+        ));
+    }
+
+    Ok(())
+}
+
 fn license_file(filename: &str, uncommented: &str) -> Result<(), Error> {
     let mut f = File::open(filename)?;
     let mut content = String::new();
@@ -94,12 +105,7 @@ fn license_file(filename: &str, uncommented: &str) -> Result<(), Error> {
     let commenter = comments::get_commenter(&filetype);
     let mut header = commenter.comment(uncommented);
 
-    if content.contains(&header) {
-        return Err(io::Error::new(
-            io::ErrorKind::AlreadyExists,
-            format!("{} already licensed", filename),
-        ));
-    }
+    should_license_file(&filename, &content, &header)?;
 
     header.push_str(&content);
 
@@ -268,5 +274,47 @@ mod test {
     #[test]
     fn test_get_project_files() {
         assert!(get_project_files().len() != 0)
+    }
+
+    #[test]
+    fn test_should_license_file() {
+        let content = "
+fn main() {
+    println!(\"Hello world!\");
+}
+"
+            .to_string();
+
+        let header =
+            "// Copyright 2018 Mathew Robinson <chasinglogic@gmail.com>. All rights reserved.
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+"
+                .to_string();
+
+        if let Err(e) = should_license_file("not_a_file", &content, &header) {
+            println!("Got error: {} when we shouldn't have.", e);
+            assert!(false);
+        }
+
+        let mut new_content = header.clone();
+        new_content.push_str(&content);
+
+        if let Ok(()) = should_license_file("not_a_file", &new_content, &header) {
+            println!("Got OK when we should have got error.");
+            assert!(false);
+        }
     }
 }
