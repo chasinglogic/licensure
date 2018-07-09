@@ -4,3 +4,4 @@ email: chasinglogic@gmail.com
 ident: GPL-3.0
 excludes:
     - Cargo.toml
+    - "[.]travis[.]yml"

@@ -85,8 +85,19 @@ fn find_config_file() -> Option<PathBuf> {
     None
 }
 
-fn should_license_file(filename: &str, content: &str, header: &str) -> Result<(), Error> {
-    if content.contains(&header) {
+fn should_license_file(filename: &str, content: &str) -> Result<(), Error> {
+    // TODO: Compile this once
+    let rgx = match Regex::new("Copyright [0-9]{4} .*[.] All rights reserved[.]") {
+        Ok(r) => r,
+        Err(e) => {
+            return Err(io::Error::new(
+                io::ErrorKind::Other,
+                format!("unable to compile regex: {}", e),
+            ))
+        }
+    };
+
+    if rgx.is_match(&content) {
         return Err(io::Error::new(
             io::ErrorKind::AlreadyExists,
             format!("{} already licensed", filename),
@@ -101,11 +112,11 @@ fn license_file(filename: &str, uncommented: &str) -> Result<(), Error> {
     let mut content = String::new();
     f.read_to_string(&mut content)?;
 
+    should_license_file(&filename, &content)?;
+
     let filetype = comments::get_filetype(&filename);
     let commenter = comments::get_commenter(&filetype);
     let mut header = commenter.comment(uncommented);
-
-    should_license_file(&filename, &content, &header)?;
 
     header.push_str(&content);
 
@@ -200,7 +211,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.")
                     let mut f = File::open(file).expect("FAIL");
                     let mut content = String::new();
                     f.read_to_string(&mut content).expect("FAIL");
-                    serde_yaml::from_str(&content).unwrap()
+                    match serde_yaml::from_str(&content) {
+                        Ok(cfg) => cfg,
+                        Err(e) => {
+                            println!("ERROR: Unable to parse config file: {}", e);
+                            process::exit(1);
+                        }
+                    }
                 }
                 None => Config::new("", ""),
             };
@@ -304,7 +321,7 @@ fn main() {
 "
                 .to_string();
 
-        if let Err(e) = should_license_file("not_a_file", &content, &header) {
+        if let Err(e) = should_license_file("not_a_file", &content) {
             println!("Got error: {} when we shouldn't have.", e);
             assert!(false);
         }
@@ -312,7 +329,7 @@ fn main() {
         let mut new_content = header.clone();
         new_content.push_str(&content);
 
-        if let Ok(()) = should_license_file("not_a_file", &new_content, &header) {
+        if let Ok(()) = should_license_file("not_a_file", &new_content) {
             println!("Got OK when we should have got error.");
             assert!(false);
         }
