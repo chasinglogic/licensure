@@ -103,6 +103,7 @@ pub fn get_commenter(ftype: &str) -> Box<Comment> {
         "css" => Box::new(BlockComment::new("/*\n", "*/").with_per_line("*")),
         "cpp" => Box::new(BlockComment::new("/*\n", "*/").with_per_line("*")),
         "c" => Box::new(BlockComment::new("/*\n", "*/").with_per_line("*")),
+        "lisp" | "el" => Box::new(LineComment::new(";;;")),
         _ => Box::new(LineComment::new("#")),
     }
 }
@@ -152,6 +153,21 @@ it looked super dapper
 *
 */",
             get_commenter("cpp").comment(EX_TEXT)
+        )
+    }
+
+    #[test]
+    fn test_comment_lisp() {
+        assert_eq!(
+            ";;; There once was a man
+;;; with a very nice cat
+;;; the cat wore a top hat
+;;; it looked super dapper
+;;;
+
+
+",
+            get_commenter("lisp").comment(EX_TEXT)
         )
     }
 
