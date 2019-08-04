@@ -9,6 +9,7 @@ excludes:
   - README.*
   - LICENSE.*
   - .*\.(md|rst|txt)
+  - Cargo.toml
 # Definition of the licenses used on this project and to what files
 # they should apply.
 licenses:
