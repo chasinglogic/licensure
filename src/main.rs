@@ -13,39 +13,48 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+extern crate chrono;
 extern crate clap;
-extern crate licensure;
+#[macro_use]
+extern crate log;
 extern crate regex;
+extern crate reqwest;
+extern crate serde;
 extern crate serde_yaml;
+extern crate textwrap;
 
-use std::env;
+mod comments;
+mod config;
+mod licensure;
+mod template;
+
 use std::fs::File;
-use std::io;
 use std::io::prelude::*;
-use std::io::Error;
-use std::path::PathBuf;
+use std::io::ErrorKind;
 use std::process;
 use std::process::Command;
 
-use clap::{App, Arg, SubCommand};
-use regex::Regex;
+use chrono::offset::{Offset, Utc};
+use clap::{App, Arg};
+use simplelog::Level;
 
-use licensure::comments;
-use licensure::licenses::Config;
+use config::DEFAULT_CONFIG;
+use licensure::Licensure;
 
-const DEFAULT_PATTERNS: &'static str =
-    "(\\.gitignore|.*lock|\\.licensure\\.yml|README.*|LICENSE.*)";
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+const AUTHORS: &str = env!("CARGO_PKG_AUTHORS");
+const ABOUT: &str = env!("CARGO_PKG_DESCRIPTION");
+const HOMEPAGE: &str = env!("CARGO_PKG_HOMEPAGE");
 
-fn get_project_files() -> Box<Vec<String>> {
+// Possible that we should remove this functionality.
+fn get_project_files() -> Vec<String> {
     match Command::new("git").arg("ls-files").output() {
-        Ok(proc) => Box::new(
-            String::from_utf8(proc.stdout)
-                .unwrap()
-                .split("\n")
-                .filter(|s| *s != "")
-                .map(str::to_string)
-                .collect(),
-        ),
+        Ok(proc) => String::from_utf8(proc.stdout)
+            .unwrap()
+            .split('\n')
+            .filter(|s| *s != "")
+            .map(str::to_string)
+            .collect(),
         Err(e) => {
             println!("Failed to run git ls-files. Make sure you're in a git repo.");
             println!("{}", e);
@@ -54,210 +63,128 @@ fn get_project_files() -> Box<Vec<String>> {
     }
 }
 
-fn find_config_file() -> Option<PathBuf> {
-    if let Ok(mut cwd) = env::current_dir() {
-        loop {
-            cwd.push(".git");
-            if cwd.exists() {
-                cwd.pop();
-                cwd.push(".licensure.yml");
-                return Some(cwd);
-            }
-
-            // Pop the .git directory we added
-            cwd.pop();
-
-            // Move up a directory checking if we have hit root yet
-            if !cwd.pop() {
-                break;
-            }
-        }
-    }
-
-    if let Some(mut global) = env::home_dir() {
-        global.push(".licensure");
-        global.push("config.yml");
-        if global.exists() {
-            return Some(global);
-        }
-    }
-
-    None
-}
-
-fn license_file(filename: &str, uncommented: &str) -> Result<(), Error> {
-    let mut f = File::open(filename)?;
-    let mut content = String::new();
-    f.read_to_string(&mut content)?;
-
-    let filetype = comments::get_filetype(&filename);
-    let commenter = comments::get_commenter(&filetype);
-    let mut header = commenter.comment(uncommented);
-
-    if content.contains(&header) {
-        return Err(io::Error::new(
-            io::ErrorKind::AlreadyExists,
-            format!("{} already licensed", filename),
-        ));
-    }
-
-    header.push_str(&content);
-
-    f = File::create(filename)?;
-    f.write_all(header.as_bytes()).map(|_x| ())
-}
-
 fn main() {
     let matches = App::new("licensure")
-        .version("0.1.2")
+        .version(VERSION)
         .author("Mathew Robinson <chasinglogic@gmail.com>")
         .about(
-            "
-Manage licenses in your projects.
+            format!(
+                "{}
 
-Copyright 2018 Mathew Robinson <chasinglogic@gmail.com>. All rights reserved.
+{}
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.")
-        .subcommand(
-            SubCommand::with_name("license")
-                .about("Apply license headers to source files")
-                .arg(
-                    Arg::with_name("exclude")
-                     .short("e")
-                     .long("exclude")
-                     .takes_value(true)
-                     .value_name("REGEX")
-                     .help("A regex which will be used to determine what files to ignore.")
-                )
-                .arg(
-                    Arg::with_name("project")
-                        .long("project")
-                        .short("p")
-                        .help("When specified will license the current project files as returned by git ls-files")
-                )
-                .arg(
-                    Arg::with_name("ident")
-                        .short("i")
-                        .long("ident")
-                        .takes_value(true)
-                        .value_name("SPDX_IDENTIFIER")
-                        .help("SPDX license identifier to license files with."),
-                )
-                .arg(
-                    Arg::with_name("author")
-                        .short("a")
-                        .long("author")
-                        .takes_value(true)
-                        .value_name("AUTHOR_NAME")
-                        .help("Full name of copyright owner / source code author.")
-                )
-                .arg(
-                    Arg::with_name("email")
-                        .short("m")
-                        .long("email")
-                        .takes_value(true)
-                        .value_name("AUTHOR_EMAIL")
-                        .help("Email of the copyright owner / source code author.")
-                )
-                .arg(
-                    Arg::with_name("FILES")
-                        .multiple(true)
-                        .help("Files to license, ignored if --project is supplied"),
-                ),
+More information is available at: {}",
+                ABOUT,
+                AUTHORS.replace(":", ", "),
+                HOMEPAGE
+            )
+            .as_str(),
+        )
+        .arg(
+            Arg::with_name("verbose")
+                .short("v")
+                .long("verbose")
+                .multiple(true),
+        )
+        .arg(Arg::with_name("in-place").short("i").long("in-place"))
+        .arg(
+            Arg::with_name("exclude")
+                .short("e")
+                .long("exclude")
+                .takes_value(true)
+                .value_name("REGEX")
+                .help("A regex which will be used to determine what files to ignore."),
+        )
+        .arg(Arg::with_name("project").long("project").short("p").help(
+            "When specified will license the current project files as returned by git ls-files",
+        ))
+        .arg(
+            Arg::with_name("generate-config")
+                .long("generate-config")
+                .help("Generate a default licensure config file"),
+        )
+        .arg(
+            Arg::with_name("FILES")
+                .multiple(true)
+                .help("Files to license, ignored if --project is supplied"),
         )
         .get_matches();
 
-    match matches.subcommand() {
-        ("license", Some(args)) => {
-            let files: Vec<String> = if args.is_present("project") {
-                *get_project_files()
+    match matches.occurrences_of("verbose") {
+        0 => (),
+        x => simplelog::SimpleLogger::init(
+            if x > 2 {
+                simplelog::LevelFilter::Debug
             } else {
-                args.values_of("FILES")
-                    .expect("ERROR: Must provide files to license either as args or via --project")
-                    .map(str::to_string)
-                    .collect()
-            };
+                simplelog::LevelFilter::Info
+            },
+            // Ignore almost all logging fields for Info prints
+            simplelog::Config {
+                time: Some(Level::Debug),
+                level: Some(Level::Debug),
+                thread: Some(Level::Debug),
+                target: Some(Level::Debug),
+                location: Some(Level::Trace),
+                time_format: None,
+                offset: Utc.fix(),
+                filter_allow: None,
+                filter_ignore: None,
+            },
+        )
+        .unwrap(),
+    };
 
-            let mut config = match find_config_file() {
-                Some(file) => {
-                    let mut f = File::open(file).expect("FAIL");
-                    let mut content = String::new();
-                    f.read_to_string(&mut content).expect("FAIL");
-                    serde_yaml::from_str(&content).unwrap()
-                }
-                None => Config::new("", ""),
-            };
-
-            if let Some(author) = args.value_of("author") {
-                config.author = author.to_string();
-            } else if &config.author == "" {
-                println!("ERROR: --author is a required flag");
+    if matches.is_present("generate-config") {
+        let mut f = match File::create(".licensure.yml") {
+            Ok(f) => f,
+            Err(e) => {
+                println!("Unable to create .licensure.yml: {}", e);
                 process::exit(1);
-            };
-
-            if let Some(ident) = args.value_of("ident") {
-                config.ident = ident.to_string();
-            } else if &config.ident == "" {
-                println!("ERROR: --ident is a required flag");
-                process::exit(1);
-            };
-
-            if let Some(email) = args.value_of("email") {
-                config = config.with_email(email);
             }
+        };
 
-            if let Some(year) = args.value_of("year") {
-                config = config.with_year(year);
-            }
-
-            let mut final_pat = DEFAULT_PATTERNS.to_string();
-            if let Some(exclude) = args.value_of("exclude") {
-                final_pat.push_str("|");
-                final_pat.push_str(exclude);
-            }
-
-            let cfg_pat = config.exclude_pat();
-            if cfg_pat != "" {
-                final_pat.push_str("|");
-                final_pat.push_str(&cfg_pat);
-            }
-
-            let rgx = match Regex::new(&final_pat) {
-                Ok(r) => r,
-                Err(e) => {
-                    println!("ERROR: Unable to compile regex: {}", e);
-                    process::exit(1);
-                }
-            };
-
-            let header = config.render();
-            for file in files {
-                if rgx.is_match(&file) {
-                    println!("Skipping excluded file: {}", file);
-                    continue;
-                }
-
-                println!("Licensing file: {}", file);
-                if let Err(err) = license_file(&file, &header) {
-                    println!("{}", err);
-                }
-            }
-        }
-        _ => {
-            println!("ERROR: Unknown command");
+        if let Err(e) = f.write_all(DEFAULT_CONFIG.as_bytes()) {
+            println!("Unable to write to .licensure.yml: {}", e);
             process::exit(1);
         }
+
+        process::exit(0);
+    }
+
+    let files: Vec<String> = if matches.is_present("project") {
+        get_project_files()
+    } else {
+        matches
+            .values_of("FILES")
+            .expect("ERROR: Must provide files to license either as matches or via --project")
+            .map(str::to_string)
+            .collect()
+    };
+
+    let mut config = match config::load_config() {
+        Ok(c) => c,
+        Err(e) => {
+            if ErrorKind::NotFound == e.kind() {
+                println!("No config file found, generate one with licensure --generate-config");
+            } else {
+                println!("Error loading config file: {}", e);
+            }
+
+            process::exit(1);
+        }
+    };
+
+    if let Some(exclude) = matches.value_of("exclude") {
+        config.add_exclude(exclude);
+    }
+
+    if matches.is_present("in-place") {
+        config.change_in_place = true;
+    }
+
+    if let Err(e) = Licensure::new(config).license_files(&files) {
+        println!("Failed to license files: {}", e);
+        process::exit(1);
     }
 }
 
