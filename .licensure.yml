@@ -1,6 +1,61 @@
----
-author: Mathew Robinson
-email: chasinglogic@gmail.com
-ident: GPL-3.0
+change_in_place: true
+# Regexes which if matched by a file path will always be excluded from
+# getting a license header
 excludes:
-    - Cargo.toml
+  - \.gitignore
+  - .*lock
+  - \.git/.*
+  - \.licensure\.yml
+  - README.*
+  - LICENSE.*
+  - .*\.(md|rst|txt)
+# Definition of the licenses used on this project and to what files
+# they should apply.
+licenses:
+  # Either a regex or the string "any" to determine to what files this
+  # license should apply. It is common for projects to have files
+  # under multiple licenses or with multiple copyright holders. This
+  # provides the ability to automatically license files correctly
+  # based on their file paths.
+  #
+  # If "any" is provided all files will match this license.
+  - files: any
+    ident: GPL-3.0
+    authors:
+      - name: Mathew Robinson
+        email: chasinglogic@gmail.com
+    auto_template: true
+
+# Define type of comment characters to apply based on file extensions.
+comments:
+  # The extensions (or singular extension) field defines which file
+  # extensions to apply the commenter to.
+  - columns: 80
+    extensions:
+      - rs
+    commenter:
+      type: line
+      comment_char: "//"
+      trailing_lines: 0
+  # In this case extension is singular and a single string extension is provided.
+  - columns: 120
+    extension: html
+    commenter:
+      type: block
+      start_block_char: "<!--\n"
+      end_block_char: "-->"
+  # The extension string "any" is special and so will match any file
+  # extensions. Commenter configurations are always checked in the
+  # order they are defined, so if any is used it should be the last
+  # commenter configuration or else it will override all others.
+  #
+  # In this configuration if we can't match the file extension we fall
+  # back to the popular "#" line comment used in most scripting
+  # languages.
+  - columns: 80
+    extension: any
+    commenter:
+      type: line
+      comment_char: "#"
+      trailing_lines: 0
+    
