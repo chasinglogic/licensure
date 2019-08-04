@@ -117,7 +117,6 @@ impl Config {
         }
     }
 
-    // TODO: auto fetch SPDX templates
     pub fn get_template(&self) -> Template {
         let auto_templ;
         let t = match &self.template {
@@ -133,7 +132,7 @@ impl Config {
             }
         };
 
-        let mut t = Template::new(
+        let t = Template::new(
             &t,
             Context {
                 ident: self.ident.clone(),
@@ -143,7 +142,7 @@ impl Config {
         );
 
         if self.auto_template.unwrap_or(false) {
-            t.set_spdx_template(true);
+            return t.set_spdx_template(true);
         }
 
         t

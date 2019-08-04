@@ -48,6 +48,7 @@ impl Authors {
     }
 }
 
+#[derive(Clone)]
 pub struct Context {
     pub ident: String,
     pub authors: Authors,
@@ -67,6 +68,7 @@ impl Context {
     }
 }
 
+#[derive(Clone)]
 pub struct Template {
     spdx_template: bool,
     content: String,
@@ -82,8 +84,14 @@ impl Template {
         }
     }
 
-    pub fn set_spdx_template(&mut self, yes_or_no: bool) {
+    pub fn set_spdx_template(mut self, yes_or_no: bool) -> Template {
         self.spdx_template = yes_or_no;
+        self
+    }
+
+    pub fn set_year(mut self, year: &str) -> Template {
+        self.context.year = Some(year.to_string());
+        self
     }
 
     pub fn render(self) -> String {
