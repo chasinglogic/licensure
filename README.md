@@ -1,8 +1,10 @@
 # licensure
-A software license management CLI
+
+A software license header and copyright mangement tool.
 
 ## Table of Contents
 
+- [Why use Licensure?](#why-use-licensure)
 - [Installation](#installation)
 - [Usage](#usage)
   - [Example](#example)
@@ -10,6 +12,24 @@ A software license management CLI
 - [Configuration](#configuration)
 - [Contributing](#contributing)
 - [License](#license)
+
+## Why use Licensure?
+
+According to the Apache Software Foundation: [License headers allow
+someone examining the file to know the terms for the work, even when
+it is distributed without the rest of the distribution. Without a
+licensing notice, it must be assumed that the author has reserved all
+rights, including the right to copy, modify, and
+redistribute.](http://www.apache.org/legal/src-headers.html#faq-whyheader)
+
+It's an easy extra step to make sure that no matter what file someone
+is looking at in your software they are aware of their rights and
+yours. However maintaining and updating a copyright notice in every
+source file can be a cumbersome exercise in patience. This is where
+Licensure comes in.
+
+Licensure makes it easy to maintain and update your copyright notices
+across a project.
 
 ## Installation
 
@@ -30,9 +50,10 @@ command:
 cargo install licensure
 ```
 
-Make sure that you have a working Rust environment. Instructions for setting
-one up can be found here: [https://rustup.rs](https://rustup.rs) you can then
-install licensure from source with the following commands:
+Make sure that you have a working Rust environment. Instructions for
+setting one up can be found [on the rustup
+website](https://rustup.rs). You can then install licensure from
+source with the following commands:
 
 ```bash
 git clone https://github.com/chasinglogic/licensure
@@ -45,23 +66,54 @@ command with the `--force` flag.
 
 ## Usage
 
-### Example
+Licensure searches for a config file `.licensure.yml` which will
+inform it's operation. Licensure will not function without a config
+file and if it cannot find one it will report this to you. 
 
-For now licensure only has one sub command: `license`. This command adds license
-headers to source files and comments them. For example given the file
-`test.py` which has the following contents:
+The method for finding a config file [can be found in the
+Configuration section of this
+document.](#where-the-configuration-file-lives) For our purposes we
+can generate a default config file with: `licensure
+--generate-config`. This will write an example configuration file with
+documentation comments into your current working directory. Note that
+the default config file this generates is not functional immediately
+as you must fill out the `licenses` section of the config. Licensure
+does not want to make assumptions about the licensing of your project.
+
+In the following examples we will assume your using a simple
+configuration file such as the following:
+
+```yaml
+licenses:
+  - files: any
+    ident: GPL-3.0
+    authors:
+      - name: Mathew Robinson
+        email: chasinglogic@gmail.com
+    auto_template: true
+    
+comments:
+  - columns: 80
+    extension: any
+    commenter:
+      type: line
+      comment_char: "#"
+      trailing_lines: 0
+```
+
+With this config file if you create a source file named `test.py` with the contents:
 
 ```python
 print("Hello world!")
 ```
 
-If we run the following command:
+We can then license this file with the command:
 
 ```
-licensure license --author 'Mathew Robinson' --email 'chasinglogic@gmail.com' --ident GPL-3.0 test.py
+chasinglogic@galactica $ licensure test.py
 ```
 
-The resulting file will be:
+Licensure will print out the licensed file as follows:
 
 ```python
 # Copyright 2018 Mathew Robinson <chasinglogic@gmail.com>. All rights reserved.
@@ -78,157 +130,295 @@ The resulting file will be:
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-
 print("Hello World!")
+```
+
+If we want to update the contents `test.py` instead of just printing
+out the licensed file content we can give Licensure the `--in-place`
+(or shortened form `-i`) flag:
+
+```
+chasinglogic@galactica $ licensure --in-place test.py
 ```
 
 Licensure does some naive string comparison to determine if the header already
 exists. If you try to run licensure against a file which already has the
-generated license header you'll get this message:
+generated license header it will skip it. You can see what files were
+skipped by running licensure with `--verbose`:
 
 ```
-chasinglogic@Mathews-MBP:~ $ licensure license --author 'Mathew Robinson' --email 'chasinglogic@gmail.com' --ident GPL-3.0 test.py
-Licensing file: test.py
+chasinglogic@galactica $ licensure --in-place --verbose test.py
 test.py already licensed
-chasinglogic@Mathews-MBP:~ $
+chasinglogic@galactica $
 ```
 
-This makes it safe and convenient to run `licensure license --project` on the
-same project multiple times.
-
-### Supported Filetypes
-
-Licensure does it's best to determine the comment character based on filetype
-but will always fall back to "python style" comments if it can't figure it out
-since that is the most comment comment style. As of today we explicitly support
-the following file types:
-
-- js
-- rs
-- go
-- c
-- cpp
-- html
-- css
-- py
-- sh
-- bash
-
-Adding new file types is trivial and would make for a [great first pull
-request](#contributing) if you're interested in adding your favorite programming
-language.
-
-### Help
-
-For reference the full help output has been placed below. If you're having any
-problems running licensure please open an
-[issue](https://github.com/chasinglogic/licensure/issues).
-
-```text
-licensure 0.1.2
-Mathew Robinson <chasinglogic@gmail.com>
-
-Manage licenses in your projects.
-
-Copyright 2018 Mathew Robinson <chasinglogic@gmail.com>. All rights reserved.
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-USAGE:
-    licensure [SUBCOMMAND]
-
-FLAGS:
-    -h, --help       Prints help information
-    -V, --version    Prints version information
-
-SUBCOMMANDS:
-    help       Prints this message or the help of the given subcommand(s)
-    license    Apply license headers to source files
-```
-
-License help: 
-
-```text
-licensure-license
-Apply license headers to source files
-
-USAGE:
-    licensure license [FLAGS] [OPTIONS] [FILES]...
-
-FLAGS:
-    -h, --help       Prints help information
-    -p, --project    When specified will license the current project files as returned by git ls-files
-    -V, --version    Prints version information
-
-OPTIONS:
-    -a, --author <AUTHOR_NAME>       Full name of copyright owner / source code author.
-    -m, --email <AUTHOR_EMAIL>       Email of the copyright owner / source code author.
-    -e, --exclude <REGEX>            A regex which will be used to determine what files to ignore.
-    -i, --ident <SPDX_IDENTIFIER>    SPDX license identifier to license files with.
-
-ARGS:
-    <FILES>...    Files to license, ignored if --project is supplied
-```
+This makes it safe and convenient to run `licensure --in-place
+--project` on the same project multiple times.
 
 ## Configuration
 
-Specifying the author, license identifier, and other flags to licensure every
-time can be tedious and error prone. To help with this licensure supports the
-use of a configuration file so you can specify these options.
+Licensure requires the use of a configuration file. This section will
+explain all of the options of a configuration file, their definitions,
+and some explanation of how they work. If you're instead looking for
+the quickest way to get up and running you can generate a config with
+`licensure --generate-config` which will give you a default config
+file with documentation comments.
 
-**Note:** All arguments given as flags will overwrite the values in a config
-file if found, with the exception of excludes. Excludes will be joined with any
-found in a config file.
+### Where the Configuration File lives
 
-The configuration file is written in yaml and is searched for in two locations.
-First, it will look for a file named `.licensure.yml` in the root of your git
-repository. Second, it will look for a global configuration file located at
-`$HOME/.licensure/config.yml`.
+The configuration file is written in yaml and is searched for by
+climbing the directory tree, starting at the current working
+directory, for a file named `.licensure.yml`. If it is not found the
+global configuration file located at
+`$XDG_CONFIG_HOME/licensure/config.yml` (where `$XDG_CONFIG_HOME` is
+`$HOME/.config` by default) will be used.
 
-The required keys for the configuration file are the same as the required
-command line flags, author and ident:
+This essentially means that subdirectories can have their own
+licensure configs and the order of precedence is closest config file
+to the current working directory.
+
+### Top Level Configuration Options
+
+The Configuration File only has a two top level options: `exclude`,
+and `change_in_place`. The other top level keys in the config file are
+referred to as [Configuration Sections](#configuration-sections) and
+make up the bulk of Licensure configuration.
+
+#### change\_in\_place. 
+
+Takes a boolean indicating whether to change files in place when
+licensure is run. If this is set to `false` then when this config file
+is in use files will never be updated in place, even if `--in-place`
+is provided via the command line.
+
+**Example Configuration:**
 
 ```yaml
-author: Mathew Robinson
-ident: Apache-2.0
+change_in_place: true
 ```
 
-You can also specify an author email:
+#### exclude
+
+Takes a list of strings that will be compiled as regexes to filter out
+files from licensing.  Excludes passed via the command line flag will
+be joined with any found in a config file.
+
+**Example Configuration:**
 
 ```yaml
-author: Mathew Robinson
-ident: Apache-2.0
-email: chasinglogic@gmail.com
-```
-
-Additionally you can add excludes which is a yaml list of regexes which
-licensure will logical or together and combine with the default excludes. For
-example if you want to exclude the Cargo.toml from getting a license header: 
-
-```yaml
-author: Mathew Robinson
-ident: Apache-2.0
-email: chasinglogic@gmail.com
+# Regexes which if matched by a file path will always be excluded from
+# getting a license header
 excludes:
-  - Cargo.toml
+  - \.gitignore
+  - .*lock
+  - \.git/.*
+  - \.licensure\.yml
+  - README.*
+  - LICENSE.*
+  - .*\.(md|rst|txt)
 ```
 
-You can use regexes as supported by the 
-[regex crate](https://docs.rs/regex/1.0.1/regex/) to make more complicated
-matches. By default licensure will ignore any files ending with "lock", the
-".gitignore" file, the README and the LICENSE file.
+### Configuration Sections
+
+Currently Licensure has two configuration sections: `licenses` and
+`comments`. They configure the two axes Licensure uses to generate a
+license header.
+
+#### licenses
+
+The licenses section is a list of license configuration
+objects. License configuration objects define what licenses should
+apply to what files, the templates for those licenses, and the
+copyright holders of those files. A license configuration object has
+the following form:
+
+```yaml
+# Either a regex or the string "any" to determine to what files this
+# license should apply. It is common for projects to have files
+# under multiple licenses or with multiple copyright holders. This
+# provides the ability to automatically license files correctly
+# based on their file paths.
+#
+# If "any" is provided all files will match this license.
+files: any
+
+# The license identifier, a list of common identifiers can be
+# found at: https://spdx.org/licenses/ but existence of the ident
+# in this list it is not enforced unless auto_template is set to
+# true.
+ident: MIT
+
+# A list of authors who hold copyright over these files
+authors:
+  # Provide either your full name or company name for copyright purposes
+  - name: Your Name Here
+    # Optionally provide email for copyright purposes
+    # email: you@yourdomain.com
+
+# The template that will be rendered to generate the header before
+# comment characters are applied. Available variables are:
+#  - [year]: substituted with the current year.
+#  - [name of author]: Substituted with name of the author and email
+#    if provided. If email is provided the output appears as Full
+#    Name <email@example.com>. If multiple authors are provided the
+#    list is concatenated together with commas.
+template: |
+  Copyright [year] [name of author]. All rights reserved. Use of
+  this source code is governed by the [ident] license that can be
+  found in the LICENSE file.
+
+# If auto_template is true then the template configuration is ignored
+# and the SPDX API will be queried with the ident value to
+# automatically determine the license header template. auto_template
+# works best with licenses that have a standardLicenseHeader field
+# defined in their license info JSON, if it is not then we will use
+# the full licenseText to generate the header which works fine for
+# short licenses like MIT but can be quite lengthy for other licenses
+# like BSD-4-Clause. The above default template is valid for most
+# licenses and is recommended for MIT, and BSD licenses. Common
+# licenses that work well with the auto_template feature are GPL
+# variants, and the Apache 2.0 license.
+#
+# Important Note: this means the ident must be a valid SPDX identifier
+# auto_template: true
+```
+
+A common licenses section would look like:
+
+```yaml
+licenses:
+  - files: any
+    authors:
+      - name: Mathew Robinson
+        email: chasinglogic@gmail.com
+        ident: MIT
+        template: |
+          Copyright [year] [name of author]. All rights reserved. Use of
+          this source code is governed by the [ident] license that can be
+          found in the LICENSE file.
+```
+
+#### comments
+
+The comments section is a list of comment configuration
+objects. Comment configuration objects define how files with certain
+extensions will be commented. They can also define the column width to
+wrap the generated license header at. A comment configuration object
+has the following fields: `extensions` (or `extension`), `columns`,
+`commenter`,
+
+##### Columns Configuration
+
+The `columns` key specifies to what width the license header should be wrapped. Common values include: `80`, `100`, `120`.
+
+Example:
+
+```yaml
+columns: 80
+```
+
+##### Extension Configuration
+
+The extensions (or singular extension) field defines which file
+extensions to apply the commenter to. If extension is the string 
+"any" then all extensions will match this comment configuration.
+
+Example use of any:
+
+```yaml
+extension: any
+```
+
+Example definition of explicit extensions
+
+```yaml
+extensions:
+  - js
+  - rs
+  - go
+```
+
+##### Commenter Configuration
+
+The commenter field defines the kind of commenter to
+generate. There are two types of commenters: line and block.
+
+A line commenter type will apply the `comment_char` to the beginning
+of each line in the license header. It will then add empty newlines to
+the end of the header equal to `trailing_lines`.
+
+A block commenter type will add `start_block_char` as the first character
+in the license header and add `end_block_char` as the last character
+in the license header. When `per_line_char` is provided each line of
+the header between the block start and end characters will be
+line commented with the `per_line_char`.
+
+If trailing_lines is omitted it's assumed to be 0.
+
+####### Line Commenter Example
+
+This is an example of a line commenter configuration. 
+
+```yaml
+commenter:
+  type: line
+  comment_char: "//"
+  trailing_lines: 0
+```
+
+If this commenter is given the text:
+
+```
+A piece of text that
+spans multiple lines
+```
+
+It would generate:
+
+```
+// A piece of text that 
+// spans multiple lines
+```
+
+Note: when columns has a value the text may be re-wrapped to match the
+column width.
+
+####### Block Commenter Example
+
+This is an example of a block commenter configuration. 
+
+```yaml
+commenter:
+  type: block
+  start_block_char: "/*\n"
+  end_block_char: "*/"
+  per_line_char: "*"
+  trailing_lines: 0
+```
+
+If this commenter is given the text:
+
+```
+A piece of text that
+spans multiple lines
+```
+
+It would generate:
+
+```
+/*
+* A piece of text that 
+* spans multiple lines
+*/
+```
+
+Note: when columns has a value the text may be re-wrapped to match the
+column width.
+
+### A Complete Configuration Example 
+
+The best up to date minimal example configuration is the one for
+[licensure itself](https://github.com/chasinglogic/licensure/blob/master/.licensure.yml).
 
 ## Contributing
 
@@ -243,7 +433,7 @@ matches. By default licensure will ignore any files ending with "lock", the
 This code is distributed under the GNU General Public License
 
 ```
-    Copyright (C) 2017 Mathew Robinson
+    Copyright (C) 2019 Mathew Robinson
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
