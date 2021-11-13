@@ -1,5 +1,4 @@
 use chrono::prelude::*;
-use regex::Regex;
 use serde::Deserialize;
 
 #[derive(Clone, Deserialize)]
@@ -89,10 +88,10 @@ impl Template {
         self
     }
 
-    pub fn set_year(mut self, year: &str) -> Template {
-        self.context.year = Some(year.to_string());
-        self
-    }
+    // pub fn set_year(mut self, year: &str) -> Template {
+    //     self.context.year = Some(year.to_string());
+    //     self
+    // }
 
     pub fn render(self) -> String {
         let (year_repl, author_repl, ident_repl) = if self.spdx_template {

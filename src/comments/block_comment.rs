@@ -6,7 +6,7 @@ use crate::comments::line_comment::LineComment;
 pub struct BlockComment {
     start: String,
     end: String,
-    per_line: Option<Box<Comment>>,
+    per_line: Option<Box<dyn Comment>>,
     trailing_lines: usize,
 }
 
