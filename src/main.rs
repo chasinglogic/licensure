@@ -124,17 +124,13 @@ More information is available at: {}",
                 simplelog::LevelFilter::Info
             },
             // Ignore almost all logging fields for Info prints
-            simplelog::Config {
-                time: Some(Level::Debug),
-                level: Some(Level::Debug),
-                thread: Some(Level::Debug),
-                target: Some(Level::Debug),
-                location: Some(Level::Trace),
-                time_format: None,
-                offset: Utc.fix(),
-                filter_allow: None,
-                filter_ignore: None,
-            },
+            simplelog::ConfigBuilder::new()
+                .set_time_level(simplelog::LevelFilter::Debug)
+                .set_thread_level(simplelog::LevelFilter::Debug)
+                .set_target_level(simplelog::LevelFilter::Debug)
+                .set_location_level(simplelog::LevelFilter::Trace)
+                .set_time_offset(Utc.fix())
+                .build(),
         )
         .unwrap(),
     };

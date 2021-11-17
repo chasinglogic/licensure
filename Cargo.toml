@@ -20,7 +20,7 @@ regex = "1.0.0"
 serde_derive = "1.0"
 serde_yaml = "0.7"
 log = "0.4.8"
-simplelog = "0.6.0"
+simplelog = "0.11.0"
 reqwest = "0.9.19"
 textwrap = "0.11.0"
 
