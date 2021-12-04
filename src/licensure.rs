@@ -42,6 +42,18 @@ impl Licensure {
                 continue;
             }
 
+            // if already licensed but the trailing lines/whitespace do not match
+            let content_trimmed = content.trim_end_matches(|c| c == '\n' || c == '\r' || c == ' ');
+            let header_trimmed = header.trim_end_matches(|c| c == '\n' || c == '\r' || c == ' ');
+            if content_trimmed.contains(header_trimmed) {
+                info!(
+                    "{} already licensed but the trailing lines/whitespace do not match",
+                    file
+                );
+                // ignore the trailing lines for now so it does not result in duplicate license headers
+                continue; // TODO fix the trailing whitespace or empty lines to match the template
+            }
+
             header.push_str(&content);
 
             if self.config.change_in_place {
