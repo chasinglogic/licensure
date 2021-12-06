@@ -117,8 +117,16 @@ impl Template {
             ("[year]", "[name of author]", "[ident]")
         };
 
+        let mut templ = self.content.clone();
+
+        // Some license headers come pre-textwrapped. This regex
+        // replacement removes their wrapping while preserving
+        // intentional newlines.
+        let re = Regex::new("[A-z0-9]\n").unwrap();
+        templ = re.replace_all(&templ, " ").to_string();
+
         // Perform our substitutions
-        self.content
+        templ
             .replace(year_repl, &self.context.get_year())
             .replace(author_repl, &self.context.get_authors())
             .replace(ident_repl, &self.context.ident)
