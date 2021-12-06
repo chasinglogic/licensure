@@ -13,7 +13,8 @@ impl Licensure {
         Licensure { config }
     }
 
-    pub fn license_files(self, files: &[String]) -> Result<(), io::Error> {
+    pub fn license_files(self, files: &[String]) -> Result<Vec<&String>, io::Error> {
+        let mut files_not_licensed = Vec::new();
         for file in files {
             if self.config.excludes.is_match(file) {
                 continue;
@@ -41,6 +42,7 @@ impl Licensure {
                 info!("{} already licensed", file);
                 continue;
             }
+            files_not_licensed.push(file);
 
             header.push_str(&content);
 
@@ -52,6 +54,6 @@ impl Licensure {
             }
         }
 
-        Ok(())
+        Ok(files_not_licensed)
     }
 }

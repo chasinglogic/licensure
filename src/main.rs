@@ -88,6 +88,11 @@ More information is available at: {}",
         )
         .arg(Arg::with_name("in-place").short("i").long("in-place"))
         .arg(
+            Arg::with_name("check")
+                .long("check")
+                .help("Checks if any file is not licensed with the given config"),
+        )
+        .arg(
             Arg::with_name("exclude")
                 .short("e")
                 .long("exclude")
@@ -182,9 +187,20 @@ More information is available at: {}",
         config.change_in_place = true;
     }
 
-    if let Err(e) = Licensure::new(config).license_files(&files) {
-        println!("Failed to license files: {}", e);
-        process::exit(1);
+    match Licensure::new(config).license_files(&files) {
+        Err(e) => {
+            println!("Failed to license files: {}", e);
+            process::exit(1);
+        }
+        Ok(files_not_licensed) => {
+            if matches.is_present("check") && !files_not_licensed.is_empty() {
+                eprintln!("The following files were not licensed with the given config.");
+                for file in files_not_licensed {
+                    eprintln!("{}", file);
+                }
+                process::exit(1);
+            }
+        }
     }
 }
 
