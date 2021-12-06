@@ -111,6 +111,13 @@ comments:
       type: block
       start_block_char: "<!--\n"
       end_block_char: "-->"
+  - extensions:
+      - el
+      - lisp
+    commenter:
+      type: line
+      comment_char: ";;;"
+      trailing_lines: 0
   # The extension string "any" is special and so will match any file
   # extensions. Commenter configurations are always checked in the
   # order they are defined, so if any is used it should be the last
