@@ -68,6 +68,8 @@ pub struct Config {
 
     template: Option<String>,
     auto_template: Option<bool>,
+
+    unwrap_text: bool,
 }
 
 impl Config {
@@ -138,6 +140,7 @@ impl Config {
                 ident: self.ident.clone(),
                 year: self.year.clone(),
                 authors: self.authors.clone(),
+                unwrap_text: self.unwrap_text,
             },
         );
 
