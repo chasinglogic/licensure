@@ -13,14 +13,14 @@ impl Licensure {
         Licensure { config }
     }
 
-    pub fn license_files(self, files: &[String]) -> Result<Vec<&String>, io::Error> {
+    pub async fn license_files(self, files: &[String]) -> Result<Vec<&String>, io::Error> {
         let mut files_not_licensed = Vec::new();
         for file in files {
             if self.config.excludes.is_match(file) {
                 continue;
             }
 
-            let templ = match self.config.licenses.get_template(file) {
+            let templ = match self.config.licenses.get_template(file).await {
                 Some(t) => t,
                 None => {
                     info!("skipping {} because no license config matched.", file);
