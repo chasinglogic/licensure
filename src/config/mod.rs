@@ -90,7 +90,7 @@ impl From<Vec<CommentConfig>> for CommentConfigList {
 }
 
 impl CommentConfigList {
-    pub fn get_commenter(&self, filename: &str) -> (CommentConfig, Box<Comment>) {
+    pub fn get_commenter(&self, filename: &str) -> (CommentConfig, Box<dyn Comment>) {
         let file_type = get_filetype(filename);
 
         for c in &self.cfgs {

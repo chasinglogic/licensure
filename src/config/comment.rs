@@ -75,7 +75,7 @@ impl Config {
         self.extension.matches(file_type)
     }
 
-    pub fn commenter(&self) -> Box<Comment> {
+    pub fn commenter(&self) -> Box<dyn Comment> {
         match &self.commenter {
             Commenter::Line {
                 comment_char,

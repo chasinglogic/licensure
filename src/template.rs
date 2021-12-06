@@ -1,5 +1,4 @@
 use chrono::prelude::*;
-use regex::Regex;
 use serde::Deserialize;
 
 #[derive(Clone, Deserialize)]
@@ -86,11 +85,6 @@ impl Template {
 
     pub fn set_spdx_template(mut self, yes_or_no: bool) -> Template {
         self.spdx_template = yes_or_no;
-        self
-    }
-
-    pub fn set_year(mut self, year: &str) -> Template {
-        self.context.year = Some(year.to_string());
         self
     }
 
