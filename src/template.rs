@@ -117,14 +117,100 @@ impl Template {
 
         // Some license headers come pre-textwrapped. This regex
         // replacement removes their wrapping while preserving
-        // intentional newlines.
-        let re = Regex::new("[A-z0-9]\n").unwrap();
-        templ = re.replace_all(&templ, " ").to_string();
+        // intentional line breaks / empty lines.
+        let re = Regex::new(r"(?P<char>.)\n").unwrap();
+        templ = re.replace_all(&templ, "$char ").to_string();
 
         // Perform our substitutions
         templ
             .replace(year_repl, &self.context.get_year())
             .replace(author_repl, &self.context.get_authors())
             .replace(ident_repl, &self.context.ident)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_substitution_at_end_of_line() {
+        let context = Context {
+            ident: String::from("test"),
+            authors: Authors::from(vec![]),
+            year: Some(String::from("2020")),
+        };
+        let template = Template::new("License [year]\ntext", context);
+        let expected = String::from("License 2020 text");
+        assert_eq!(expected, template.render())
+    }
+
+    #[test]
+    fn test_substitutions() {
+        let context = Context {
+            ident: String::from("test"),
+            authors: Authors::from(vec![CopyrightHolder {
+                name: "Mathew Robinson".to_string(),
+                email: Some("chasinglogic@gmail.com".to_string()),
+            }]),
+            year: Some(String::from("2020")),
+        };
+        let template = Template::new("Copyright (C) [year] [name of author] This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, version 3. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>", context);
+        let expected = String::from("Copyright (C) 2020 Mathew Robinson <chasinglogic@gmail.com> This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, version 3. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>");
+        assert_eq!(expected, template.render())
+    }
+
+    #[test]
+    fn test_substitutions_prewrapped() {
+        let context = Context {
+            ident: String::from("test"),
+            authors: Authors::from(vec![CopyrightHolder {
+                name: "Mathew Robinson".to_string(),
+                email: Some("chasinglogic@gmail.com".to_string()),
+            }]),
+            year: Some(String::from("2020")),
+        };
+        let template = Template::new(
+            "Copyright (C) [year] [name of author] This
+program is free software: you can redistribute it and/or modify it under
+the terms of the GNU Affero General Public License as published by the
+Free Software Foundation, version 3. This program is distributed in the
+hope that it will be useful, but WITHOUT ANY WARRANTY; without even the
+implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+See the GNU Affero General Public License for more details. You should
+have received a copy of the GNU Affero General Public License along with
+this program. If not, see <https://www.gnu.org/licenses/>",
+            context,
+        );
+        let expected = String::from("Copyright (C) 2020 Mathew Robinson <chasinglogic@gmail.com> This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, version 3. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>");
+        assert_eq!(expected, template.render())
+    }
+
+    #[test]
+    fn test_substitutions_prewrapped_preserves_linebreaks() {
+        let context = Context {
+            ident: String::from("test"),
+            authors: Authors::from(vec![CopyrightHolder {
+                name: "Mathew Robinson".to_string(),
+                email: Some("chasinglogic@gmail.com".to_string()),
+            }]),
+            year: Some(String::from("2020")),
+        };
+        let template = Template::new(
+            "Copyright (C) [year] [name of author] This
+program is free software: you can redistribute it and/or modify it under
+the terms of the GNU Affero General Public License as published by the
+
+Free Software Foundation, version 3. This program is distributed in the
+hope that it will be useful, but WITHOUT ANY WARRANTY; without even the
+implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+See the GNU Affero General Public License for more details. You should
+have received a copy of the GNU Affero General Public License along with
+this program. If not, see <https://www.gnu.org/licenses/>",
+            context,
+        );
+        let expected = String::from("Copyright (C) 2020 Mathew Robinson <chasinglogic@gmail.com> This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the 
+Free Software Foundation, version 3. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>");
+        assert_eq!(expected, template.render())
     }
 }
