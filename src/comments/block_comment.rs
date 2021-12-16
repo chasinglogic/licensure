@@ -1,5 +1,3 @@
-use textwrap;
-
 use super::Comment;
 use crate::comments::line_comment::LineComment;
 

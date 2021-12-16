@@ -1,6 +1,7 @@
 use chrono::prelude::*;
 use regex::Regex;
 use serde::Deserialize;
+use std::fmt;
 
 #[derive(Clone, Deserialize)]
 struct CopyrightHolder {
@@ -8,15 +9,15 @@ struct CopyrightHolder {
     email: Option<String>,
 }
 
-impl CopyrightHolder {
-    fn to_string(&self) -> String {
+impl fmt::Display for CopyrightHolder {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut a = self.name.clone();
 
         if let Some(email) = &self.email {
             a.push_str(&format!(" <{}>", email));
         }
 
-        a
+        write!(f, "{}", a)
     }
 }
 
@@ -32,19 +33,19 @@ impl From<Vec<CopyrightHolder>> for Authors {
     }
 }
 
-impl Authors {
-    fn to_string(&self) -> String {
+impl fmt::Display for Authors {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut a = String::new();
 
         for author in &self.authors {
-            if a != "" {
+            if !a.is_empty() {
                 a.push_str(", ");
             }
 
             a.push_str(&author.to_string());
         }
 
-        a
+        write!(f, "{}", a)
     }
 }
 

@@ -45,13 +45,13 @@ const AUTHORS: &str = env!("CARGO_PKG_AUTHORS");
 const ABOUT: &str = env!("CARGO_PKG_DESCRIPTION");
 const HOMEPAGE: &str = env!("CARGO_PKG_HOMEPAGE");
 
-// Possible that we should remove this functionality.
+// FIXME: Possible that we should remove this functionality.
 fn get_project_files() -> Vec<String> {
     match Command::new("git").arg("ls-files").output() {
         Ok(proc) => String::from_utf8(proc.stdout)
             .unwrap()
             .split('\n')
-            .filter(|s| *s != "")
+            .filter(|s| !s.is_empty())
             .map(str::to_string)
             .collect(),
         Err(e) => {

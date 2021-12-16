@@ -1,5 +1,3 @@
-use textwrap;
-
 use super::Comment;
 
 pub struct LineComment {

@@ -1,7 +1,6 @@
 use std::process;
 
 use regex::Regex;
-use reqwest;
 use serde::Deserialize;
 
 use crate::template::{Authors, Context, Template};
@@ -133,7 +132,7 @@ impl Config {
         };
 
         let t = Template::new(
-            &t,
+            t,
             Context {
                 ident: self.ident.clone(),
                 year: self.year.clone(),
