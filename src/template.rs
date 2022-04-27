@@ -54,6 +54,7 @@ pub struct Context {
     pub ident: String,
     pub authors: Authors,
     pub year: Option<String>,
+    pub unwrap_text: bool,
 }
 
 impl Context {
@@ -115,11 +116,13 @@ impl Template {
 
         let mut templ = self.content.clone();
 
-        // Some license headers come pre-textwrapped. This regex
-        // replacement removes their wrapping while preserving
-        // intentional line breaks / empty lines.
-        let re = Regex::new(r"(?P<char>.)\n").unwrap();
-        templ = re.replace_all(&templ, "$char ").to_string();
+        if self.context.unwrap_text {
+            // Some license headers come pre-textwrapped. This regex
+            // replacement removes their wrapping while preserving
+            // intentional line breaks / empty lines.
+            let re = Regex::new(r"(?P<char>.)\n").unwrap();
+            templ = re.replace_all(&templ, "$char ").to_string();
+        }
 
         // Perform our substitutions
         templ
