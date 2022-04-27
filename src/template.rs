@@ -58,6 +58,7 @@ pub struct Context {
     pub ident: String,
     pub authors: Authors,
     pub year: Option<String>,
+    pub unwrap_text: bool,
 }
 
 impl Context {
@@ -202,7 +203,27 @@ impl Template {
             }
         } else {
             ("[year]", "[name of author]", "[ident]")
+<<<<<<< HEAD
         }
+=======
+        };
+
+        let mut templ = self.content.clone();
+
+        if self.context.unwrap_text {
+            // Some license headers come pre-textwrapped. This regex
+            // replacement removes their wrapping while preserving
+            // intentional line breaks / empty lines.
+            let re = Regex::new(r"(?P<char>.)\n").unwrap();
+            templ = re.replace_all(&templ, "$char ").to_string();
+        }
+
+        // Perform our substitutions
+        templ
+            .replace(year_repl, &self.context.get_year())
+            .replace(author_repl, &self.context.get_authors())
+            .replace(ident_repl, &self.context.ident)
+>>>>>>> 7cbef20 (fix: add an option for text unwrapping)
     }
 }
 
