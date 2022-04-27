@@ -74,8 +74,8 @@ impl Config {
         self.files.is_match(s)
     }
 
-    fn fetch_template(&self) -> String {
-        let mut r = match reqwest::get(&format!("https://spdx.org/licenses/{}.json", &self.ident)) {
+    async fn fetch_template(&self) -> String {
+        let r = match reqwest::get(&format!("https://spdx.org/licenses/{}.json", &self.ident)).await {
             Ok(r) => r,
             Err(e) => {
                 println!("Failed to fetch license template from SPDX: {}", e);
@@ -102,7 +102,7 @@ impl Config {
             }
         }
 
-        let json: SPDXLicenseInfo = match r.json() {
+        let json: SPDXLicenseInfo = match r.json().await {
             Ok(j) => j,
             Err(e) => {
                 println!("Failed to deserialize SPDX JSON: {}", e);
@@ -116,13 +116,13 @@ impl Config {
         }
     }
 
-    pub fn get_template(&self) -> Template {
+    pub async fn get_template(&self) -> Template {
         let auto_templ;
         let t = match &self.template {
             Some(ref t) => t,
             None => {
                 if self.auto_template.unwrap_or(false) {
-                    auto_templ = self.fetch_template();
+                    auto_templ = self.fetch_template().await;
                     &auto_templ
                 } else {
                     println!("auto_template not enabled and no template provided, please add a template option to the license definition for {}. Exitting", self.ident);

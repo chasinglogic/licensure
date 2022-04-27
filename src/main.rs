@@ -38,6 +38,7 @@ use clap::{App, Arg};
 use chrono::offset::{Offset, Utc};
 
 use config::DEFAULT_CONFIG;
+use futures::executor::block_on;
 use licensure::Licensure;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -181,21 +182,24 @@ More information is available at: {}",
         config.change_in_place = true;
     }
 
-    match Licensure::new(config).license_files(&files) {
-        Err(e) => {
-            println!("Failed to license files: {}", e);
-            process::exit(1);
-        }
-        Ok(files_not_licensed) => {
-            if matches.is_present("check") && !files_not_licensed.is_empty() {
-                eprintln!("The following files were not licensed with the given config.");
-                for file in files_not_licensed {
-                    eprintln!("{}", file);
-                }
+    let done = async {
+        match Licensure::new(config).license_files(&files).await {
+            Err(e) => {
+                println!("Failed to license files: {}", e);
                 process::exit(1);
             }
+            Ok(files_not_licensed) => {
+                if matches.is_present("check") && !files_not_licensed.is_empty() {
+                    eprintln!("The following files were not licensed with the given config.");
+                    for file in files_not_licensed {
+                        eprintln!("{}", file);
+                    }
+                    process::exit(1);
+                }
+            }
         }
-    }
+    };
+    block_on(done);
 }
 
 #[cfg(test)]

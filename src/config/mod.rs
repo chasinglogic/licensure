@@ -112,10 +112,10 @@ pub struct LicenseConfigList {
 }
 
 impl LicenseConfigList {
-    pub fn get_template(&self, filename: &str) -> Option<Template> {
+    pub async fn get_template(&self, filename: &str) -> Option<Template> {
         for cfg in &self.cfgs {
             if cfg.file_is_match(filename) {
-                return Some(cfg.get_template());
+                return Some(cfg.get_template().await);
             }
         }
 
