@@ -31,6 +31,7 @@ mod template;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::ErrorKind;
+use std::path::Path;
 use std::process;
 use std::process::Command;
 
@@ -51,7 +52,8 @@ fn get_project_files() -> Vec<String> {
         Ok(proc) => String::from_utf8(proc.stdout)
             .unwrap()
             .split('\n')
-            .filter(|s| !s.is_empty())
+            // git-ls still returns the removed files that are not committed, so we filter those out.
+            .filter(|s| !s.is_empty() && Path::new(s).exists())
             .map(str::to_string)
             .collect(),
         Err(e) => {
