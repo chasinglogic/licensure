@@ -142,6 +142,7 @@ mod tests {
             ident: String::from("test"),
             authors: Authors::from(vec![]),
             year: Some(String::from("2020")),
+            unwrap_text: true,
         };
         let template = Template::new("License [year]\ntext", context);
         let expected = String::from("License 2020 text");
@@ -157,6 +158,7 @@ mod tests {
                 email: Some("chasinglogic@gmail.com".to_string()),
             }]),
             year: Some(String::from("2020")),
+            unwrap_text: true,
         };
         let template = Template::new("Copyright (C) [year] [name of author] This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, version 3. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>", context);
         let expected = String::from("Copyright (C) 2020 Mathew Robinson <chasinglogic@gmail.com> This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, version 3. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>");
@@ -172,6 +174,7 @@ mod tests {
                 email: Some("chasinglogic@gmail.com".to_string()),
             }]),
             year: Some(String::from("2020")),
+            unwrap_text: true,
         };
         let template = Template::new(
             "Copyright (C) [year] [name of author] This
@@ -198,6 +201,7 @@ this program. If not, see <https://www.gnu.org/licenses/>",
                 email: Some("chasinglogic@gmail.com".to_string()),
             }]),
             year: Some(String::from("2020")),
+            unwrap_text: true,
         };
         let template = Template::new(
             "Copyright (C) [year] [name of author] This
