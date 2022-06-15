@@ -35,8 +35,8 @@ use std::path::Path;
 use std::process;
 use std::process::Command;
 
-use clap::{App, Arg};
 use chrono::offset::{Offset, Utc};
+use clap::{App, Arg};
 
 use config::DEFAULT_CONFIG;
 use licensure::Licensure;
@@ -48,7 +48,20 @@ const HOMEPAGE: &str = env!("CARGO_PKG_HOMEPAGE");
 
 // FIXME: Possible that we should remove this functionality.
 fn get_project_files() -> Vec<String> {
-    match Command::new("git").arg("ls-files").output() {
+    let mut files = git_ls_files(Vec::new());
+
+    let mut new_unstaged_files = git_ls_files(vec!["--others", "--exclude-standard"]);
+    files.append(&mut new_unstaged_files);
+
+    return files;
+}
+
+fn git_ls_files(extra_args: Vec<&str>) -> Vec<String> {
+    match Command::new("git")
+        .arg("ls-files")
+        .args(extra_args)
+        .output()
+    {
         Ok(proc) => String::from_utf8(proc.stdout)
             .unwrap()
             .split('\n')
