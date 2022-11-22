@@ -1,7 +1,8 @@
+use std::fmt;
+
 use chrono::prelude::*;
 use regex::Regex;
 use serde::Deserialize;
-use std::fmt;
 
 #[derive(Clone, Deserialize)]
 struct CopyrightHolder {

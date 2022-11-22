@@ -8,7 +8,7 @@ readme = "README.md"
 description = "A software license management tool"
 repository = "https://github.com/chasinglogic/licensure"
 homepage = "https://github.com/chasinglogic/licensure"
-edition = "2018"
+edition = "2021"
 
 [badges]
 travis-ci = { repository = "chasinglogic/licensure", branch = "master" }

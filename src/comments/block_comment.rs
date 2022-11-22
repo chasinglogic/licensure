@@ -1,5 +1,6 @@
-use super::Comment;
 use crate::comments::line_comment::LineComment;
+
+use super::Comment;
 
 pub struct BlockComment {
     start: String,

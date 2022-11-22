@@ -23,22 +23,22 @@ extern crate serde;
 extern crate serde_yaml;
 extern crate textwrap;
 
+use std::fs::File;
+use std::io::ErrorKind;
+use std::io::prelude::*;
+use std::process;
+use std::process::Command;
+
+use chrono::offset::{Offset, Utc};
+use clap::{App, Arg};
+
+use config::DEFAULT_CONFIG;
+use licensure::Licensure;
+
 mod comments;
 mod config;
 mod licensure;
 mod template;
-
-use std::fs::File;
-use std::io::prelude::*;
-use std::io::ErrorKind;
-use std::process;
-use std::process::Command;
-
-use clap::{App, Arg};
-use chrono::offset::{Offset, Utc};
-
-use config::DEFAULT_CONFIG;
-use licensure::Licensure;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const AUTHORS: &str = env!("CARGO_PKG_AUTHORS");
@@ -77,7 +77,7 @@ More information is available at: {}",
                 AUTHORS.replace(":", ", "),
                 HOMEPAGE
             )
-            .as_str(),
+                .as_str(),
         )
         .arg(
             Arg::with_name("verbose")
@@ -130,7 +130,7 @@ More information is available at: {}",
                 .set_time_offset(Utc.fix())
                 .build(),
         )
-        .unwrap(),
+            .unwrap(),
     };
 
     if matches.is_present("generate-config") {
