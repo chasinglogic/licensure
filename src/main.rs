@@ -39,6 +39,7 @@ mod comments;
 mod config;
 mod licensure;
 mod template;
+mod utils;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const AUTHORS: &str = env!("CARGO_PKG_AUTHORS");
@@ -186,12 +187,22 @@ More information is available at: {}",
             println!("Failed to license files: {}", e);
             process::exit(1);
         }
-        Ok(files_not_licensed) => {
-            if matches.is_present("check") && !files_not_licensed.is_empty() {
-                eprintln!("The following files were not licensed with the given config.");
-                for file in files_not_licensed {
-                    eprintln!("{}", file);
+        Ok(stats) => {
+            if matches.is_present("check") && !(stats.files_not_licensed.is_empty() && stats.files_needing_license_update.is_empty()) {
+                if !stats.files_needing_license_update.is_empty() {
+                    eprintln!("The following files' licenses need to be updated");
+                    for file in stats.files_needing_license_update {
+                        eprintln!("{}", file);
+                    }
                 }
+
+                if !stats.files_not_licensed.is_empty() {
+                    eprintln!("The following files were not licensed with the given config.");
+                    for file in stats.files_not_licensed {
+                        eprintln!("{}", file);
+                    }
+                }
+
                 process::exit(1);
             }
         }
