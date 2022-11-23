@@ -3,7 +3,6 @@ use std::io;
 use std::io::prelude::*;
 
 use crate::config::Config;
-use crate::utils::trim_trailing_whitespace;
 
 pub struct Licensure {
     config: Config,
@@ -83,8 +82,8 @@ impl Licensure {
             stats.files_not_licensed.push(file.clone());
 
             // if already licensed but the trailing lines/whitespace do not match
-            let content_trimmed = trim_trailing_whitespace(&content);
-            let header_trimmed = trim_trailing_whitespace(&header);
+            let content_trimmed = content.trim_end();
+            let header_trimmed = header.trim_end();
 
             if content_trimmed.contains(header_trimmed) {
                 info!(

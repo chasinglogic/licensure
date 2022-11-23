@@ -5,7 +5,6 @@ use regex::Regex;
 use serde::Deserialize;
 
 use crate::comments::Comment;
-use crate::utils::trim_trailing_whitespace;
 
 #[derive(Clone, Deserialize)]
 struct CopyrightHolder {
@@ -132,7 +131,7 @@ impl Template {
         );
 
         if trim_trailing {
-            rendered = trim_trailing_whitespace(&rendered).to_string()
+            rendered = rendered.trim_end().to_string();
         }
 
         let escaped: Vec<_> = rendered
