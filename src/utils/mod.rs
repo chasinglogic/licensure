@@ -6,9 +6,8 @@ pub fn remove_column_wrapping(string: &str) -> String {
     // while preserving intentional line breaks / empty lines.
     let re = Regex::new(r"(?P<char>.)\n").unwrap();
     re
-        .replace_all(&string, "$char ")
+        .replace_all(string, "$char ")
         .replace(" \n", "\n\n")
-        .to_string()
 }
 
 #[cfg(test)]

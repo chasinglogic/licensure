@@ -75,7 +75,7 @@ fn main() {
 
 More information is available at: {}",
                 ABOUT,
-                AUTHORS.replace(":", ", "),
+                AUTHORS.replace(':', ", "),
                 HOMEPAGE
             )
                 .as_str(),

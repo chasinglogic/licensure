@@ -87,10 +87,10 @@ pub struct Template {
 // correct column width, but also be unique enough so that we can subsequently swap
 // it for a regex pattern while not colliding with any text that might already be
 // in the license text.
-const INTERMEDIATE_YEAR_TOKEN: &'static str = "@YR@";
+const INTERMEDIATE_YEAR_TOKEN: &str = "@YR@";
 
 // Matches any full 4-digit year
-const YEAR_RE: &'static str = "[0-9]{4}";
+const YEAR_RE: &str = "[0-9]{4}";
 
 impl Template {
     pub fn new(template: &str, context: Context) -> Template {
@@ -106,36 +106,36 @@ impl Template {
         self
     }
 
-    pub fn outdated_license_pattern(&self, commenter: &Box<dyn Comment>, columns: Option<usize>) -> Regex {
-        self.build_year_varying_regex(&mut self.content.clone(), commenter, columns, false)
+    pub fn outdated_license_pattern(&self, commenter: &dyn Comment, columns: Option<usize>) -> Regex {
+        self.build_year_varying_regex(commenter, columns, false)
     }
 
-    pub fn outdated_license_trimmed_pattern(&self, commenter: &Box<dyn Comment>, columns: Option<usize>) -> Regex {
-        self.build_year_varying_regex(&mut self.content.clone(), commenter, columns, true)
+    pub fn outdated_license_trimmed_pattern(&self, commenter: &dyn Comment, columns: Option<usize>) -> Regex {
+        self.build_year_varying_regex(commenter, columns, true)
     }
 
     pub fn render(&self) -> String {
-        let (year_repl, author_repl, ident_repl) = self.replacement_tokens();
-        let template = remove_column_wrapping(&mut self.content.clone());
-
-        // Perform our substitutions
-        template
-            .replace(year_repl, &self.context.get_year())
-            .replace(author_repl, &self.context.get_authors())
-            .replace(ident_repl, &self.context.ident)
+        self.interpolate(&self.context)
     }
 
-    fn build_year_varying_regex(&self, content: &mut str, commenter: &Box<dyn Comment>, columns: Option<usize>, trim_trailing: bool) -> Regex {
+    fn interpolate(&self, context: &Context) -> String {
         let (year_repl, author_repl, ident_repl) = self.replacement_tokens();
+        let nowrap_header_text = remove_column_wrapping(&self.content.clone());
 
-        let nowrap_header_text = remove_column_wrapping(content);
+        // Perform our substitutions
+        nowrap_header_text
+            .replace(year_repl, &context.get_year())
+            .replace(author_repl, &context.get_authors())
+            .replace(ident_repl, &context.ident)
+    }
+
+    fn build_year_varying_regex(&self, commenter: &dyn Comment, columns: Option<usize>, trim_trailing: bool) -> Regex {
+        let mut context = self.context.clone();
 
         // interpolate the header with the intermediate year token
-        let interpolated_header = nowrap_header_text
-            .replace(year_repl, INTERMEDIATE_YEAR_TOKEN)
-            .replace(author_repl, &self.context.get_authors())
-            .replace(ident_repl, &self.context.ident);
+        context.year = Some(INTERMEDIATE_YEAR_TOKEN.to_string());
 
+        let interpolated_header = self.interpolate(&context);
         let mut rendered = commenter.comment(&interpolated_header, columns);
 
         if trim_trailing {
@@ -242,7 +242,7 @@ mod tests {
         };
         let template = Template::new("Copyright (C) [year] [name of author] This program is free software.", context);
         let commenter: Box<dyn Comment> = Box::new(LineComment::new("#"));
-        let re = template.outdated_license_pattern(&commenter, Option::Some(1000));
+        let re = template.outdated_license_pattern(commenter.as_ref(), Option::Some(1000));
         assert_eq!(true, re.is_match("# Copyright (C) 2020 Mathew Robinson <chasinglogic@gmail.com> This program is free software.\n"))
     }
 
@@ -258,11 +258,11 @@ mod tests {
         };
         let template = Template::new("Copyright (C) [year] [name of author] This program is free software.", context);
         let commenter: Box<dyn Comment> = Box::new(LineComment::new("#").set_trailing_lines(2));
-        let re = template.outdated_license_pattern(&commenter, Option::Some(1000));
+        let re = template.outdated_license_pattern(commenter.as_ref(), Option::Some(1000));
         assert_eq!(true, re.is_match("# Copyright (C) 2020 Mathew Robinson <chasinglogic@gmail.com> This program is free software.\n\n\n"));
         assert_eq!(false, re.is_match("# Copyright (C) 2020 Mathew Robinson <chasinglogic@gmail.com> This program is free software."));
 
-        let trimmed = template.outdated_license_trimmed_pattern(&commenter, Option::Some(1000));
+        let trimmed = template.outdated_license_trimmed_pattern(commenter.as_ref(), Option::Some(1000));
         assert_eq!(true, trimmed.is_match("# Copyright (C) 2020 Mathew Robinson <chasinglogic@gmail.com> This program is free software."))
     }
 
