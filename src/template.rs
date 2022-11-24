@@ -164,7 +164,7 @@ impl Template {
             // joining the fragments with the year-matching regex pattern
             // effectively inserts itself into all the locations where the
             // intermediate token existed. We now have a regex that matches
-            // the exact license header text, except with any 4-digit year.
+            // the exact license header text, but with any 4-digit year.
             //
             // And we only care about 4-digit years in our lifetime ;).
             .join(YEAR_RE);
