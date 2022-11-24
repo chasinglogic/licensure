@@ -10,8 +10,8 @@ use serde::Deserialize;
 pub use default::DEFAULT_CONFIG;
 
 use crate::comments::Comment;
-use crate::config::comment::Config as CommentConfig;
 use crate::config::comment::get_filetype;
+use crate::config::comment::Config as CommentConfig;
 use crate::config::license::Config as LicenseConfig;
 use crate::template::Template;
 

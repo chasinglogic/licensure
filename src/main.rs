@@ -24,8 +24,8 @@ extern crate serde_yaml;
 extern crate textwrap;
 
 use std::fs::File;
-use std::io::ErrorKind;
 use std::io::prelude::*;
+use std::io::ErrorKind;
 use std::process;
 use std::process::Command;
 
@@ -78,7 +78,7 @@ More information is available at: {}",
                 AUTHORS.replace(':', ", "),
                 HOMEPAGE
             )
-                .as_str(),
+            .as_str(),
         )
         .arg(
             Arg::with_name("verbose")
@@ -131,7 +131,7 @@ More information is available at: {}",
                 .set_time_offset(Utc.fix())
                 .build(),
         )
-            .unwrap(),
+        .unwrap(),
     };
 
     if matches.is_present("generate-config") {
@@ -188,7 +188,10 @@ More information is available at: {}",
             process::exit(1);
         }
         Ok(stats) => {
-            if matches.is_present("check") && !(stats.files_not_licensed.is_empty() && stats.files_needing_license_update.is_empty()) {
+            if matches.is_present("check")
+                && !(stats.files_not_licensed.is_empty()
+                    && stats.files_needing_license_update.is_empty())
+            {
                 if !stats.files_needing_license_update.is_empty() {
                     eprintln!("The following files' licenses need to be updated");
                     for file in stats.files_needing_license_update {

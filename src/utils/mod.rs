@@ -5,9 +5,7 @@ pub fn remove_column_wrapping(string: &str) -> String {
     // This regex replacement undoes the column-width wrapping
     // while preserving intentional line breaks / empty lines.
     let re = Regex::new(r"(?P<char>.)\n").unwrap();
-    re
-        .replace_all(string, "$char ")
-        .replace(" \n", "\n\n")
+    re.replace_all(string, "$char ").replace(" \n", "\n\n")
 }
 
 #[cfg(test)]

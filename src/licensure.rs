@@ -62,7 +62,8 @@ impl Licensure {
                 continue;
             }
 
-            let trimmed_outdated_re = templ.outdated_license_trimmed_pattern(commenter.as_ref(), cfg.get_columns());
+            let trimmed_outdated_re =
+                templ.outdated_license_trimmed_pattern(commenter.as_ref(), cfg.get_columns());
             if trimmed_outdated_re.is_match(&content) {
                 info!("{} licensed, but year is outdated", file);
                 stats.files_needing_license_update.push(file.clone());
@@ -115,6 +116,9 @@ pub struct LicenseStats {
 
 impl LicenseStats {
     fn new() -> Self {
-        Self { files_not_licensed: Vec::new(), files_needing_license_update: Vec::new() }
+        Self {
+            files_not_licensed: Vec::new(),
+            files_needing_license_update: Vec::new(),
+        }
     }
 }

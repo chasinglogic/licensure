@@ -106,11 +106,19 @@ impl Template {
         self
     }
 
-    pub fn outdated_license_pattern(&self, commenter: &dyn Comment, columns: Option<usize>) -> Regex {
+    pub fn outdated_license_pattern(
+        &self,
+        commenter: &dyn Comment,
+        columns: Option<usize>,
+    ) -> Regex {
         self.build_year_varying_regex(commenter, columns, false)
     }
 
-    pub fn outdated_license_trimmed_pattern(&self, commenter: &dyn Comment, columns: Option<usize>) -> Regex {
+    pub fn outdated_license_trimmed_pattern(
+        &self,
+        commenter: &dyn Comment,
+        columns: Option<usize>,
+    ) -> Regex {
         self.build_year_varying_regex(commenter, columns, true)
     }
 
@@ -129,7 +137,12 @@ impl Template {
             .replace(ident_repl, &context.ident)
     }
 
-    fn build_year_varying_regex(&self, commenter: &dyn Comment, columns: Option<usize>, trim_trailing: bool) -> Regex {
+    fn build_year_varying_regex(
+        &self,
+        commenter: &dyn Comment,
+        columns: Option<usize>,
+        trim_trailing: bool,
+    ) -> Regex {
         let mut context = self.context.clone();
 
         // interpolate the header with the intermediate year token
@@ -148,19 +161,15 @@ impl Template {
             // split removes all instances of the token, yielding all text fragments
             // around the locations where tokens were excised
             .split(INTERMEDIATE_YEAR_TOKEN)
-
             // convert to iterable for functional-style chaining
             .collect::<Vec<_>>()
             .into_iter()
-
             // regex-escape each text fragment so we can match the literal
             // text via regex
-            .map(|frag| { regex::escape(frag) })
-
+            .map(|frag| regex::escape(frag))
             // yields a list containing all of the text fragments we want
             // to match as literals via regex
             .collect::<Vec<_>>()
-
             // joining the fragments with the year-matching regex pattern
             // effectively inserts itself into all the locations where the
             // intermediate token existed. We now have a regex that matches
@@ -240,7 +249,10 @@ mod tests {
             }]),
             year: Some(String::from("2022")),
         };
-        let template = Template::new("Copyright (C) [year] [name of author] This program is free software.", context);
+        let template = Template::new(
+            "Copyright (C) [year] [name of author] This program is free software.",
+            context,
+        );
         let commenter: Box<dyn Comment> = Box::new(LineComment::new("#"));
         let re = template.outdated_license_pattern(commenter.as_ref(), Option::Some(1000));
         assert_eq!(true, re.is_match("# Copyright (C) 2020 Mathew Robinson <chasinglogic@gmail.com> This program is free software.\n"))
@@ -256,13 +268,17 @@ mod tests {
             }]),
             year: Some(String::from("2022")),
         };
-        let template = Template::new("Copyright (C) [year] [name of author] This program is free software.", context);
+        let template = Template::new(
+            "Copyright (C) [year] [name of author] This program is free software.",
+            context,
+        );
         let commenter: Box<dyn Comment> = Box::new(LineComment::new("#").set_trailing_lines(2));
         let re = template.outdated_license_pattern(commenter.as_ref(), Option::Some(1000));
         assert_eq!(true, re.is_match("# Copyright (C) 2020 Mathew Robinson <chasinglogic@gmail.com> This program is free software.\n\n\n"));
         assert_eq!(false, re.is_match("# Copyright (C) 2020 Mathew Robinson <chasinglogic@gmail.com> This program is free software."));
 
-        let trimmed = template.outdated_license_trimmed_pattern(commenter.as_ref(), Option::Some(1000));
+        let trimmed =
+            template.outdated_license_trimmed_pattern(commenter.as_ref(), Option::Some(1000));
         assert_eq!(true, trimmed.is_match("# Copyright (C) 2020 Mathew Robinson <chasinglogic@gmail.com> This program is free software."))
     }
 
