@@ -594,7 +594,7 @@ checksum = "21a41fed9d98f27ab1c6d161da622a4fa35e8a54a8adc24bbf3ddd0ef70b0e50"
 
 [[package]]
 name = "licensure"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "chrono",
  "clap",
