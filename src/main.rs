@@ -23,22 +23,23 @@ extern crate serde;
 extern crate serde_yaml;
 extern crate textwrap;
 
+use std::fs::File;
+use std::io::ErrorKind;
+use std::io::prelude::*;
+use std::process;
+use std::process::Command;
+
+use chrono::offset::{Offset, Utc};
+use clap::{App, Arg};
+
+use config::DEFAULT_CONFIG;
+use licensure::Licensure;
+
 mod comments;
 mod config;
 mod licensure;
 mod template;
-
-use std::fs::File;
-use std::io::prelude::*;
-use std::io::ErrorKind;
-use std::process;
-use std::process::Command;
-
-use clap::{App, Arg};
-use chrono::offset::{Offset, Utc};
-
-use config::DEFAULT_CONFIG;
-use licensure::Licensure;
+mod utils;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const AUTHORS: &str = env!("CARGO_PKG_AUTHORS");
@@ -74,10 +75,10 @@ fn main() {
 
 More information is available at: {}",
                 ABOUT,
-                AUTHORS.replace(":", ", "),
+                AUTHORS.replace(':', ", "),
                 HOMEPAGE
             )
-            .as_str(),
+                .as_str(),
         )
         .arg(
             Arg::with_name("verbose")
@@ -130,7 +131,7 @@ More information is available at: {}",
                 .set_time_offset(Utc.fix())
                 .build(),
         )
-        .unwrap(),
+            .unwrap(),
     };
 
     if matches.is_present("generate-config") {
@@ -186,12 +187,22 @@ More information is available at: {}",
             println!("Failed to license files: {}", e);
             process::exit(1);
         }
-        Ok(files_not_licensed) => {
-            if matches.is_present("check") && !files_not_licensed.is_empty() {
-                eprintln!("The following files were not licensed with the given config.");
-                for file in files_not_licensed {
-                    eprintln!("{}", file);
+        Ok(stats) => {
+            if matches.is_present("check") && !(stats.files_not_licensed.is_empty() && stats.files_needing_license_update.is_empty()) {
+                if !stats.files_needing_license_update.is_empty() {
+                    eprintln!("The following files' licenses need to be updated");
+                    for file in stats.files_needing_license_update {
+                        eprintln!("{}", file);
+                    }
                 }
+
+                if !stats.files_not_licensed.is_empty() {
+                    eprintln!("The following files were not licensed with the given config.");
+                    for file in stats.files_not_licensed {
+                        eprintln!("{}", file);
+                    }
+                }
+
                 process::exit(1);
             }
         }

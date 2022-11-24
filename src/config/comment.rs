@@ -114,5 +114,4 @@ pub mod tests {
     fn test_get_filetype() {
         assert_eq!("py", get_filetype("test.py"))
     }
-
 }
