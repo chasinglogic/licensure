@@ -39,6 +39,7 @@ mod comments;
 mod config;
 mod licensure;
 mod template;
+mod utils;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const AUTHORS: &str = env!("CARGO_PKG_AUTHORS");
