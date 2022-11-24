@@ -5,6 +5,7 @@ use regex::Regex;
 use serde::Deserialize;
 
 use crate::comments::Comment;
+use crate::utils::remove_column_wrapping;
 
 #[derive(Clone, Deserialize)]
 struct CopyrightHolder {
@@ -79,9 +80,13 @@ pub struct Template {
     context: Context,
 }
 
-// this token needs to be exactly 4 chars; this is temporarily used when formatting
-// the template into a comment regex with the correct column width that can match
-// the [year] against /[\d]{4}/
+// this token is temporarily used when formatting the template into a comment
+// regex with the correct column width that can match the [year] against /[\d]{4}/
+//
+// this intermediate token needs to be exactly 4 chars long so we can wrap to the
+// correct column width, but also be unique enough so that we can subsequently swap
+// it for a regex pattern while not colliding with any text that might already be
+// in the license text.
 const INTERMEDIATE_YEAR_TOKEN: &'static str = "@YR@";
 
 // Matches any full 4-digit year
@@ -111,7 +116,7 @@ impl Template {
 
     pub fn render(&self) -> String {
         let (year_repl, author_repl, ident_repl) = self.replacement_tokens();
-        let template = self.unwrap_license_headers(&mut self.content.clone());
+        let template = remove_column_wrapping(&mut self.content.clone());
 
         // Perform our substitutions
         template
@@ -122,34 +127,49 @@ impl Template {
 
     fn build_year_varying_regex(&self, content: &mut str, commenter: &Box<dyn Comment>, columns: Option<usize>, trim_trailing: bool) -> Regex {
         let (year_repl, author_repl, ident_repl) = self.replacement_tokens();
-        let mut rendered = commenter.comment(
-            &(self.unwrap_license_headers(content)
-                .replace(year_repl, INTERMEDIATE_YEAR_TOKEN)
-                .replace(author_repl, &self.context.get_authors())
-                .replace(ident_repl, &self.context.ident)),
-            columns,
-        );
+
+        let nowrap_header_text = remove_column_wrapping(content);
+
+        // interpolate the header with the intermediate year token
+        let interpolated_header = nowrap_header_text
+            .replace(year_repl, INTERMEDIATE_YEAR_TOKEN)
+            .replace(author_repl, &self.context.get_authors())
+            .replace(ident_repl, &self.context.ident);
+
+        let mut rendered = commenter.comment(&interpolated_header, columns);
 
         if trim_trailing {
             rendered = rendered.trim_end().to_string();
         }
 
-        let escaped: Vec<_> = rendered
+        // let's now replace the intermediate year token with a proper
+        // regex for a 4-digit year (see const `YEAR_RE`)
+        let escaped = rendered
+            // split removes all instances of the token, yielding all text fragments
+            // around the locations where tokens were excised
             .split(INTERMEDIATE_YEAR_TOKEN)
+
+            // convert to iterable for functional-style chaining
             .collect::<Vec<_>>()
             .into_iter()
+
+            // regex-escape each text fragment so we can match the literal
+            // text via regex
             .map(|frag| { regex::escape(frag) })
-            .collect::<Vec<_>>();
 
-        Regex::new(&(escaped.join(YEAR_RE))).unwrap()
-    }
+            // yields a list containing all of the text fragments we want
+            // to match as literals via regex
+            .collect::<Vec<_>>()
 
-    fn unwrap_license_headers(&self, template: &mut str) -> String {
-        // Some license headers come pre-textwrapped. This regex
-        // replacement removes their wrapping while preserving
-        // intentional line breaks / empty lines.
-        let re = Regex::new(r"(?P<char>.)\n").unwrap();
-        re.replace_all(&template, "$char ").to_string()
+            // joining the fragments with the year-matching regex pattern
+            // effectively inserts itself into all the locations where the
+            // intermediate token existed. We now have a regex that matches
+            // the exact license header text, except with any 4-digit year.
+            //
+            // And we only care about 4-digit years in our lifetime ;).
+            .join(YEAR_RE);
+
+        Regex::new(&escaped).unwrap()
     }
 
     fn replacement_tokens(&self) -> (&'static str, &'static str, &'static str) {
@@ -295,7 +315,8 @@ have received a copy of the GNU Affero General Public License along with
 this program. If not, see <https://www.gnu.org/licenses/>",
             context,
         );
-        let expected = String::from("Copyright (C) 2020 Mathew Robinson <chasinglogic@gmail.com> This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the 
+        let expected = String::from("Copyright (C) 2020 Mathew Robinson <chasinglogic@gmail.com> This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the
+
 Free Software Foundation, version 3. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>");
         assert_eq!(expected, template.render())
     }

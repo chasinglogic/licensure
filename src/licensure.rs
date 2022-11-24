@@ -60,23 +60,23 @@ impl Licensure {
                 }
 
                 continue;
-            } else {
-                let trimmed_outdated_re = templ.outdated_license_trimmed_pattern(&commenter, cfg.get_columns());
-                if trimmed_outdated_re.is_match(&content) {
-                    info!("{} licensed, but year is outdated", file);
-                    stats.files_needing_license_update.push(file.clone());
+            }
 
-                    let updated = trimmed_outdated_re.replace(&content, header);
+            let trimmed_outdated_re = templ.outdated_license_trimmed_pattern(&commenter, cfg.get_columns());
+            if trimmed_outdated_re.is_match(&content) {
+                info!("{} licensed, but year is outdated", file);
+                stats.files_needing_license_update.push(file.clone());
 
-                    if self.config.change_in_place {
-                        let mut f = File::create(file)?;
-                        f.write_all(updated.as_bytes())?;
-                    } else {
-                        println!("{}", updated);
-                    }
+                let updated = trimmed_outdated_re.replace(&content, header);
 
-                    continue;
+                if self.config.change_in_place {
+                    let mut f = File::create(file)?;
+                    f.write_all(updated.as_bytes())?;
+                } else {
+                    println!("{}", updated);
                 }
+
+                continue;
             }
 
             stats.files_not_licensed.push(file.clone());
