@@ -61,8 +61,8 @@ cd licensure
 cargo install --path .
 ```
 
-If you need to update cargo you can then run the appropriate `cargo install`
-command with the `--force` flag.
+If you need to update licensure via cargo you can then run the appropriate
+`cargo install` command with the `--force` flag.
 
 ## Usage
 
@@ -292,10 +292,10 @@ licenses:
       - name: Mathew Robinson
         email: chasinglogic@gmail.com
         ident: MIT
-        template: |
-          Copyright [year] [name of author]. All rights reserved. Use of
-          this source code is governed by the [ident] license that can be
-          found in the LICENSE file.
+    template: |
+      Copyright [year] [name of author]. All rights reserved. Use of
+      this source code is governed by the [ident] license that can be
+      found in the LICENSE file.
 ```
 
 #### comments
@@ -355,7 +355,7 @@ line commented with the `per_line_char`.
 
 If trailing_lines is omitted it's assumed to be 0.
 
-####### Line Commenter Example
+###### Line Commenter Example
 
 This is an example of a line commenter configuration. 
 
@@ -383,7 +383,7 @@ It would generate:
 Note: when columns has a value the text may be re-wrapped to match the
 column width.
 
-####### Block Commenter Example
+###### Block Commenter Example
 
 This is an example of a block commenter configuration. 
 
