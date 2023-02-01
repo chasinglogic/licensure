@@ -36,8 +36,25 @@ impl Licensure {
 
             let mut content = String::new();
             {
-                let mut f = File::open(file)?;
-                f.read_to_string(&mut content)?;
+                let mut f = match File::open(file) {
+                    Ok(f) => f,
+                    Err(e) => {
+                        return Err(io::Error::new(
+                            io::ErrorKind::Other,
+                            format!("failed to open {}: {}", file, e)
+                        ));
+                    }
+                };
+
+                match f.read_to_string(&mut content) {
+                    Ok(_) => {}
+                    Err(e) => {
+                        return Err(io::Error::new(
+                            io::ErrorKind::Other,
+                            format!("failed to read {}: {}", file, e)
+                        ));
+                    }
+                }
             }
 
             if content.contains(&header) {
