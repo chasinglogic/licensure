@@ -13,11 +13,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-mod block_comment;
-mod line_comment;
-
 pub use block_comment::BlockComment;
 pub use line_comment::LineComment;
+
+mod block_comment;
+mod line_comment;
 
 pub trait Comment {
     fn comment(&self, text: &str, columns: Option<usize>) -> String;

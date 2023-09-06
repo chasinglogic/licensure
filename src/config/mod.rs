@@ -7,10 +7,6 @@ use std::process;
 use regex::RegexSet;
 use serde::Deserialize;
 
-mod comment;
-mod default;
-mod license;
-
 pub use default::DEFAULT_CONFIG;
 
 use crate::comments::Comment;
@@ -18,6 +14,10 @@ use crate::config::comment::get_filetype;
 use crate::config::comment::Config as CommentConfig;
 use crate::config::license::Config as LicenseConfig;
 use crate::template::Template;
+
+mod comment;
+mod default;
+mod license;
 
 fn def_change_in_place() -> bool {
     false
