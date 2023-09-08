@@ -5,7 +5,7 @@ use serde::Deserialize;
 
 use crate::template::{Authors, Context, Template};
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 #[serde(from = "String")]
 struct FileMatcher {
     any: bool,
@@ -57,7 +57,7 @@ struct SPDXLicenseInfo {
     license_header: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct Config {
     files: FileMatcher,
 
@@ -68,7 +68,12 @@ pub struct Config {
     template: Option<String>,
     auto_template: Option<bool>,
 
+    #[serde(default = "default_unwrap_text")]
     unwrap_text: bool,
+}
+
+fn default_unwrap_text() -> bool {
+    true
 }
 
 impl Config {

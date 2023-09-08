@@ -7,7 +7,7 @@ use serde::Deserialize;
 use crate::comments::Comment;
 use crate::utils::remove_column_wrapping;
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Deserialize, Debug)]
 struct CopyrightHolder {
     name: String,
     email: Option<String>,
@@ -25,7 +25,7 @@ impl fmt::Display for CopyrightHolder {
     }
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Deserialize, Debug)]
 #[serde(from = "Vec<CopyrightHolder>")]
 pub struct Authors {
     authors: Vec<CopyrightHolder>,
@@ -129,10 +129,17 @@ impl Template {
 
     fn interpolate(&self, context: &Context) -> String {
         let (year_repl, author_repl, ident_repl) = self.replacement_tokens();
-        let nowrap_header_text = remove_column_wrapping(&self.content.clone());
+        let templ = if self.context.unwrap_text {
+            // Some license headers come pre-textwrapped. This regex
+            // replacement removes their wrapping while preserving
+            // intentional line breaks / empty lines.
+            remove_column_wrapping(&self.content.clone())
+        } else {
+            self.content.clone()
+        };
 
         // Perform our substitutions
-        nowrap_header_text
+        templ
             .replace(year_repl, &context.get_year())
             .replace(author_repl, &context.get_authors())
             .replace(ident_repl, &context.ident)
@@ -203,27 +210,7 @@ impl Template {
             }
         } else {
             ("[year]", "[name of author]", "[ident]")
-<<<<<<< HEAD
         }
-=======
-        };
-
-        let mut templ = self.content.clone();
-
-        if self.context.unwrap_text {
-            // Some license headers come pre-textwrapped. This regex
-            // replacement removes their wrapping while preserving
-            // intentional line breaks / empty lines.
-            let re = Regex::new(r"(?P<char>.)\n").unwrap();
-            templ = re.replace_all(&templ, "$char ").to_string();
-        }
-
-        // Perform our substitutions
-        templ
-            .replace(year_repl, &self.context.get_year())
-            .replace(author_repl, &self.context.get_authors())
-            .replace(ident_repl, &self.context.ident)
->>>>>>> 7cbef20 (fix: add an option for text unwrapping)
     }
 }
 
@@ -271,6 +258,7 @@ mod tests {
                 email: Some("chasinglogic@gmail.com".to_string()),
             }]),
             year: Some(String::from("2022")),
+            unwrap_text: true,
         };
         let template = Template::new(
             "Copyright (C) [year] [name of author] This program is free software.",
@@ -290,6 +278,7 @@ mod tests {
                 email: Some("chasinglogic@gmail.com".to_string()),
             }]),
             year: Some(String::from("2022")),
+            unwrap_text: true,
         };
         let template = Template::new(
             "Copyright (C) [year] [name of author] This program is free software.",
@@ -331,6 +320,29 @@ this program. If not, see <https://www.gnu.org/licenses/>",
         let expected = String::from("Copyright (C) 2020 Mathew Robinson <chasinglogic@gmail.com> This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, version 3. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>");
         assert_eq!(expected, template.render())
     }
+
+    // https://github.com/chasinglogic/licensure/issues/25
+    #[test]
+    fn test_substitutions_unwrap_text_false() {
+        let context = Context {
+            ident: String::from("test"),
+            authors: Authors::from(vec![CopyrightHolder {
+                name: "Mathew Robinson".to_string(),
+                email: Some("chasinglogic@gmail.com".to_string()),
+            }]),
+            year: Some(String::from("2020")),
+            unwrap_text: false,
+        };
+        let template = Template::new(
+            "Copyright (c) [name of author]
+ SPDX-License-Identifier: [ident]",
+            context,
+        );
+        let expected = String::from("Copyright (c) Mathew Robinson <chasinglogic@gmail.com>
+ SPDX-License-Identifier: test");
+        assert_eq!(expected, template.render())
+    }
+
 
     #[test]
     fn test_substitutions_prewrapped_preserves_linebreaks() {

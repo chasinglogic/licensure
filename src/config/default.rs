@@ -65,8 +65,8 @@ licenses:
   #   Important Note: this means the ident must be a valid SPDX identifier
   #   auto_template: true
   # 
-  #   Try to detect the text wrapping of the template, and unwrap it
-  #   unwrap_text: true
+  #   If true try to detect the text wrapping of the template, and unwrap it
+  #   unwrap_text: false
 
 # Define type of comment characters to apply based on file extensions.
 comments:
