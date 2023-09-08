@@ -16,7 +16,7 @@ pub fn get_filetype(filename: &str) -> &str {
     }
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Deserialize, Debug)]
 #[serde(tag = "type")]
 pub enum Commenter {
     #[serde(alias = "block")]
@@ -35,7 +35,7 @@ pub enum Commenter {
     },
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Deserialize, Debug)]
 #[serde(untagged)]
 enum FileType {
     Single(String),
@@ -51,7 +51,7 @@ impl FileType {
     }
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Deserialize, Debug)]
 pub struct Config {
     #[serde(alias = "extensions")]
     extension: FileType,

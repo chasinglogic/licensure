@@ -23,7 +23,7 @@ fn def_change_in_place() -> bool {
     false
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct Config {
     #[serde(default = "def_change_in_place")]
     pub change_in_place: bool,
@@ -38,7 +38,7 @@ impl Config {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 #[serde(from = "Vec<String>")]
 pub struct RegexList {
     regex: RegexSet,
@@ -77,7 +77,7 @@ impl From<Vec<String>> for RegexList {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 #[serde(from = "Vec<CommentConfig>")]
 pub struct CommentConfigList {
     cfgs: Vec<CommentConfig>,
@@ -105,7 +105,7 @@ impl CommentConfigList {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 #[serde(from = "Vec<LicenseConfig>")]
 pub struct LicenseConfigList {
     cfgs: Vec<LicenseConfig>,
