@@ -41,7 +41,7 @@ impl Licensure {
                     Err(e) => {
                         return Err(io::Error::new(
                             io::ErrorKind::Other,
-                            format!("failed to open {}: {}", file, e)
+                            format!("failed to open {}: {}", file, e),
                         ));
                     }
                 };
@@ -51,7 +51,7 @@ impl Licensure {
                     Err(e) => {
                         return Err(io::Error::new(
                             io::ErrorKind::Other,
-                            format!("failed to read {}: {}", file, e)
+                            format!("failed to read {}: {}", file, e),
                         ));
                     }
                 }

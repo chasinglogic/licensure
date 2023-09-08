@@ -338,11 +338,12 @@ this program. If not, see <https://www.gnu.org/licenses/>",
  SPDX-License-Identifier: [ident]",
             context,
         );
-        let expected = String::from("Copyright (c) Mathew Robinson <chasinglogic@gmail.com>
- SPDX-License-Identifier: test");
+        let expected = String::from(
+            "Copyright (c) Mathew Robinson <chasinglogic@gmail.com>
+ SPDX-License-Identifier: test",
+        );
         assert_eq!(expected, template.render())
     }
-
 
     #[test]
     fn test_substitutions_prewrapped_preserves_linebreaks() {
