@@ -1,5 +1,5 @@
 // Simply contains the default YAML config for generation and consumption
-pub const DEFAULT_CONFIG: &str = r##"
+pub const DEFAULT_CONFIG: &str = r#"
 # Regexes which if matched by a file path will always be excluded from
 # getting a license header
 excludes:
@@ -127,12 +127,12 @@ comments:
   # commenter configuration or else it will override all others.
   #
   # In this configuration if we can't match the file extension we fall
-  # back to the popular "#" line comment used in most scripting
+  # back to the popular '#' line comment used in most scripting
   # languages.
   - extension: any
     commenter:
       type: line
-      comment_char: "#"
+      comment_char: '#'
       trailing_lines: 0
     
-"##;
+"#;

@@ -174,7 +174,7 @@ impl Template {
             .into_iter()
             // regex-escape each text fragment so we can match the literal
             // text via regex
-            .map(|frag| regex::escape(frag))
+            .map(regex::escape)
             // yields a list containing all of the text fragments we want
             // to match as literals via regex
             .collect::<Vec<_>>()

@@ -54,7 +54,7 @@ fn get_project_files() -> Vec<String> {
     let mut new_unstaged_files = git_ls_files(vec!["--others", "--exclude-standard"]);
     files.append(&mut new_unstaged_files);
 
-    return files;
+    files
 }
 
 fn git_ls_files(extra_args: Vec<&str>) -> Vec<String> {

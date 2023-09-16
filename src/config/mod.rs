@@ -66,7 +66,7 @@ impl RegexList {
 impl From<Vec<String>> for RegexList {
     fn from(rgxs: Vec<String>) -> RegexList {
         RegexList {
-            regex: match RegexSet::new(&rgxs) {
+            regex: match RegexSet::new(rgxs) {
                 Ok(r) => r,
                 Err(e) => {
                     println!("Failed to compile exclude pattern: {}", e);
