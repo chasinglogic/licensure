@@ -82,13 +82,15 @@ impl Config {
     }
 
     fn fetch_template(&self) -> String {
-        let mut r = match reqwest::get(&format!("https://spdx.org/licenses/{}.json", &self.ident)) {
-            Ok(r) => r,
-            Err(e) => {
-                println!("Failed to fetch license template from SPDX: {}", e);
-                process::exit(1);
-            }
-        };
+        let r =
+            match reqwest::blocking::get(format!("https://spdx.org/licenses/{}.json", &self.ident))
+            {
+                Ok(r) => r,
+                Err(e) => {
+                    println!("Failed to fetch license template from SPDX: {}", e);
+                    process::exit(1);
+                }
+            };
 
         match r.status() {
             reqwest::StatusCode::NOT_FOUND => {
