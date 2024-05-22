@@ -1,6 +1,9 @@
 use std::fs::File;
-use std::io;
+use std::process::exit;
+use std::{clone, io};
 use std::io::prelude::*;
+
+use regex::Regex;
 
 use crate::config::Config;
 
@@ -57,6 +60,17 @@ impl Licensure {
                 }
             }
 
+            let shebang_re: Regex = Regex::new(r"^#!.*\n").unwrap();
+            let full_content: String = content.clone();
+            let shebang_match_opt = shebang_re.find(&full_content);
+            let shebang_opt = match shebang_match_opt {
+                Some(shebang_match) => {
+                    content = content.split_off(shebang_match.end());
+                    Option::Some(shebang_match.as_str())
+                }
+                None => Option::None
+            };
+
             if content.contains(&header) {
                 info!("{} already licensed", file);
                 continue;
@@ -112,6 +126,14 @@ impl Licensure {
                 header = content.replace(header_trimmed, &header);
             } else {
                 header.push_str(&content);
+            }
+
+            match shebang_opt {
+                // Put the shebang back
+                Some(shebang) => {
+                    header.insert_str(0, shebang);
+                }
+                None => {},
             }
 
             if self.config.change_in_place {
