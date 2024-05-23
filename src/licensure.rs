@@ -59,7 +59,7 @@ impl Licensure {
                 }
             }
 
-            let shebang_re: Regex = Regex::new(r"^#!.*\n").unwrap();
+            let shebang_re: Regex = Regex::new(r"^#!.*\n").expect("shebang regex didn't compile!");
             let full_content: String = content.clone();
             let shebang_match_opt = shebang_re.find(&full_content);
             let shebang_opt = match shebang_match_opt {
