@@ -64,10 +64,8 @@ impl Licensure {
             let shebang_end = {
                 let shebang_match_opt = shebang_re.find(&content);
                 match shebang_match_opt {
-                    Some(shebang_match) => {
-                        Option::Some(shebang_match.end())
-                    }
-                    None => Option::None
+                    Some(shebang_match) => Option::Some(shebang_match.end()),
+                    None => Option::None,
                 }
             };
             // If we idenfied a shebang, strip it from content (we'll add it back at the end)
@@ -76,8 +74,8 @@ impl Licensure {
                     let mut shebang = content;
                     content = shebang.split_off(split_at);
                     Some(shebang)
-                },
-                None => { Option::None }
+                }
+                None => Option::None,
             };
 
             if content.contains(&header) {
@@ -142,7 +140,7 @@ impl Licensure {
                 Some(val) => {
                     header.insert_str(0, &val);
                 }
-                None => {},
+                None => {}
             }
 
             if self.config.change_in_place {
