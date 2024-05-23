@@ -77,7 +77,7 @@ impl Licensure {
                     content = shebang.split_off(split_at);
                     Some(shebang)
                 },
-                _ => { Option::None }
+                None => { Option::None }
             };
 
             if content.contains(&header) {
