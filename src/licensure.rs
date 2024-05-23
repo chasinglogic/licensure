@@ -1,6 +1,5 @@
 use std::fs::File;
-use std::{clone, io};
-use std::io::prelude::*;
+use std::io::{self, prelude::*};
 
 use regex::Regex;
 
@@ -60,14 +59,25 @@ impl Licensure {
             }
 
             let shebang_re: Regex = Regex::new(r"^#!.*\n").expect("shebang regex didn't compile!");
-            let full_content: String = content.clone();
-            let shebang_match_opt = shebang_re.find(&full_content);
-            let shebang_opt = match shebang_match_opt {
-                Some(shebang_match) => {
-                    content = content.split_off(shebang_match.end());
-                    Option::Some(shebang_match.as_str())
+
+            // Check for a shebang (scoped for content borrow)
+            let shebang_end = {
+                let shebang_match_opt = shebang_re.find(&content);
+                match shebang_match_opt {
+                    Some(shebang_match) => {
+                        Option::Some(shebang_match.end())
+                    }
+                    None => Option::None
                 }
-                None => Option::None
+            };
+            // If we idenfied a shebang, strip it from content (we'll add it back at the end)
+            let shebang = match shebang_end {
+                Some(split_at) => {
+                    let mut shebang = content;
+                    content = shebang.split_off(split_at);
+                    Some(shebang)
+                },
+                _ => { Option::None }
             };
 
             if content.contains(&header) {
@@ -127,10 +137,10 @@ impl Licensure {
                 header.push_str(&content);
             }
 
-            match shebang_opt {
-                // Put the shebang back
-                Some(shebang) => {
-                    header.insert_str(0, shebang);
+            // Put the shebang back (if we had one)
+            match shebang {
+                Some(val) => {
+                    header.insert_str(0, &val);
                 }
                 None => {},
             }
