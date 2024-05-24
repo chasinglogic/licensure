@@ -10,6 +10,7 @@ excludes:
   - LICENSE.*
   - .*\.(md|rst|txt)
   - Cargo.toml
+  - .*\.github/.*
 # Definition of the licenses used on this project and to what files
 # they should apply.
 licenses:
