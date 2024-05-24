@@ -202,20 +202,61 @@ impl Template {
 }
 
 #[cfg(test)]
+pub fn test_context(year: &str) -> Context {
+    Context {
+        ident: String::from("test"),
+        authors: Authors::from(vec![]),
+        year: Some(String::from(year)),
+        unwrap_text: true,
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use crate::comments::LineComment;
 
     use super::*;
 
     #[test]
+    fn test_year_varying_regex_untrimmed() {
+        let context = test_context("2020");
+        let template = Template::new("License [year]\n\ntext", context);
+        let commenter = LineComment::new("#", None);
+        let rgx = template.outdated_license_pattern(&commenter);
+        let expected = Regex::new("\\# License [0-9]{4}\n\\#\n\\# text\n")
+            .expect("This should have compiled?");
+
+        assert_eq!(rgx.to_string(), expected.to_string());
+        assert!(rgx.is_match(
+            r#"# License 2020
+#
+# text
+"#
+        ));
+    }
+
+    #[test]
+    fn test_year_varying_regex_trimmed() {
+        let context = test_context("2020");
+        let template = Template::new("License [year]\n\ntext", context);
+        let commenter = LineComment::new("#", None);
+        let rgx = template.outdated_license_trimmed_pattern(&commenter);
+        let expected =
+            Regex::new("\\# License [0-9]{4}\n\\#\n\\# text").expect("This should have compiled?");
+
+        assert_eq!(rgx.to_string(), expected.to_string());
+        assert!(rgx.is_match(
+            r#"# License 2020
+#
+# text"#
+        ));
+    }
+
+    #[test]
     fn test_substitution_at_end_of_line() {
-        let context = Context {
-            ident: String::from("test"),
-            authors: Authors::from(vec![]),
-            year: Some(String::from("2020")),
-            unwrap_text: true,
-        };
+        let context = test_context("2020");
         let template = Template::new("License [year]\ntext", context);
+        // Newline is removed because of column unwrapping.
         let expected = String::from("License 2020 text");
         assert_eq!(expected, template.render())
     }
@@ -251,8 +292,8 @@ mod tests {
             "Copyright (C) [year] [name of author] This program is free software.",
             context,
         );
-        let commenter: Box<dyn Comment> = Box::new(LineComment::new("#"));
-        let re = template.outdated_license_pattern(commenter.as_ref(), Option::Some(1000));
+        let commenter: Box<dyn Comment> = Box::new(LineComment::new("#", Option::Some(1000)));
+        let re = template.outdated_license_pattern(commenter.as_ref());
         assert_eq!(true, re.is_match("# Copyright (C) 2020 Mathew Robinson <chasinglogic@gmail.com> This program is free software.\n"))
     }
 
@@ -271,13 +312,13 @@ mod tests {
             "Copyright (C) [year] [name of author] This program is free software.",
             context,
         );
-        let commenter: Box<dyn Comment> = Box::new(LineComment::new("#").set_trailing_lines(2));
-        let re = template.outdated_license_pattern(commenter.as_ref(), Option::Some(1000));
+        let commenter: Box<dyn Comment> =
+            Box::new(LineComment::new("#", Option::Some(1000)).set_trailing_lines(2));
+        let re = template.outdated_license_pattern(commenter.as_ref());
         assert_eq!(true, re.is_match("# Copyright (C) 2020 Mathew Robinson <chasinglogic@gmail.com> This program is free software.\n\n\n"));
         assert_eq!(false, re.is_match("# Copyright (C) 2020 Mathew Robinson <chasinglogic@gmail.com> This program is free software."));
 
-        let trimmed =
-            template.outdated_license_trimmed_pattern(commenter.as_ref(), Option::Some(1000));
+        let trimmed = template.outdated_license_trimmed_pattern(commenter.as_ref());
         assert_eq!(true, trimmed.is_match("# Copyright (C) 2020 Mathew Robinson <chasinglogic@gmail.com> This program is free software."))
     }
 

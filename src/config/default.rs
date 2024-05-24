@@ -15,7 +15,9 @@ excludes:
 #
 # No default license configuration is provided. This section must be
 # configured by the user.
-licenses:
+#
+# Make sure to delete the [] below when you add your configs.
+licenses: []
   # Either a regex or the string "any" to determine to what files this
   # license should apply. It is common for projects to have files
   # under multiple licenses or with multiple copyright holders. This
@@ -37,7 +39,7 @@ licenses:
   #     - name: Your Name Here
   #       Optionally provide email for copyright purposes
   #       email: you@yourdomain.com
-  # 
+  #
   #   The template that will be rendered to generate the header before
   #   comment characters are applied. Available variables are:
   #    - [year]: substituted with the current year.
@@ -64,7 +66,7 @@ licenses:
   #
   #   Important Note: this means the ident must be a valid SPDX identifier
   #   auto_template: true
-  # 
+  #
   #   If true try to detect the text wrapping of the template, and unwrap it
   #   unwrap_text: false
 
@@ -134,5 +136,5 @@ comments:
       type: line
       comment_char: '#'
       trailing_lines: 0
-    
+
 "#;

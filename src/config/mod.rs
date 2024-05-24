@@ -38,6 +38,12 @@ impl Config {
     }
 }
 
+impl Default for Config {
+    fn default() -> Self {
+        serde_yaml::from_str(DEFAULT_CONFIG).expect("The default config is invalid?")
+    }
+}
+
 #[derive(Deserialize, Debug)]
 #[serde(from = "Vec<String>")]
 pub struct RegexList {

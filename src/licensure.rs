@@ -3,155 +3,130 @@ use std::io::{self, prelude::*};
 
 use regex::Regex;
 
+use crate::comments::Comment;
 use crate::config::Config;
+use crate::template::Template;
 
 pub struct Licensure {
     config: Config,
+    stats: LicenseStats,
 }
 
 impl Licensure {
     pub fn new(config: Config) -> Licensure {
-        Licensure { config }
+        Licensure {
+            config,
+            stats: LicenseStats::new(),
+        }
     }
 
-    pub fn license_files(self, files: &[String]) -> Result<LicenseStats, io::Error> {
-        let mut stats = LicenseStats::new();
+    pub fn license_files(mut self, files: &[String]) -> Result<LicenseStats, io::Error> {
+        self.stats = LicenseStats::new();
 
         for file in files {
             if self.config.excludes.is_match(file) {
+                info!("skipping {} because it is excluded.", file);
                 continue;
             }
-
-            let templ = match self.config.licenses.get_template(file) {
-                Some(t) => t,
-                None => {
-                    info!("skipping {} because no license config matched.", file);
-                    continue;
-                }
-            };
-
-            let (cfg, commenter) = self.config.comments.get_commenter(file);
-
-            let uncommented = templ.render();
-            let mut header = commenter.comment(&uncommented, cfg.get_columns());
 
             let mut content = String::new();
             {
-                let mut f = match File::open(file) {
-                    Ok(f) => f,
-                    Err(e) => {
-                        return Err(io::Error::new(
-                            io::ErrorKind::Other,
-                            format!("failed to open {}: {}", file, e),
-                        ));
-                    }
-                };
-
-                match f.read_to_string(&mut content) {
-                    Ok(_) => {}
-                    Err(e) => {
-                        return Err(io::Error::new(
-                            io::ErrorKind::Other,
-                            format!("failed to read {}: {}", file, e),
-                        ));
-                    }
-                }
+                let mut f = File::open(file)?;
+                f.read_to_string(&mut content)?;
             }
 
-            let shebang_re: Regex = Regex::new(r"^#!.*\n").expect("shebang regex didn't compile!");
-
-            // Check for a shebang (scoped for content borrow)
-            let shebang_end = {
-                let shebang_match_opt = shebang_re.find(&content);
-                match shebang_match_opt {
-                    Some(shebang_match) => Option::Some(shebang_match.end()),
-                    None => Option::None,
-                }
-            };
-            // If we idenfied a shebang, strip it from content (we'll add it back at the end)
-            let shebang = match shebang_end {
-                Some(split_at) => {
-                    let mut shebang = content;
-                    content = shebang.split_off(split_at);
-                    Some(shebang)
-                }
-                None => Option::None,
-            };
-
-            if content.contains(&header) {
-                info!("{} already licensed", file);
-                continue;
-            }
-
-            let outdated_re = templ.outdated_license_pattern(commenter.as_ref(), cfg.get_columns());
-            if outdated_re.is_match(&content) {
-                info!("{} licensed, but year is outdated", file);
-                stats.files_needing_license_update.push(file.clone());
-
-                let updated = outdated_re.replace(&content, header);
-
-                if self.config.change_in_place {
-                    let mut f = File::create(file)?;
-                    f.write_all(updated.as_bytes())?;
-                } else {
-                    println!("{}", updated);
-                }
-
-                continue;
-            }
-
-            let trimmed_outdated_re =
-                templ.outdated_license_trimmed_pattern(commenter.as_ref(), cfg.get_columns());
-            if trimmed_outdated_re.is_match(&content) {
-                info!("{} licensed, but year is outdated", file);
-                stats.files_needing_license_update.push(file.clone());
-
-                let updated = trimmed_outdated_re.replace(&content, header);
-
-                if self.config.change_in_place {
-                    let mut f = File::create(file)?;
-                    f.write_all(updated.as_bytes())?;
-                } else {
-                    println!("{}", updated);
-                }
-
-                continue;
-            }
-
-            stats.files_not_licensed.push(file.clone());
-
-            // if already licensed but the trailing lines/whitespace do not match
-            let content_trimmed = content.trim_end();
-            let header_trimmed = header.trim_end();
-
-            if content_trimmed.contains(header_trimmed) {
-                info!(
-                    "{} already licensed but the trailing lines/whitespace do not match",
-                    file
-                );
-
-                header = content.replace(header_trimmed, &header);
+            if let Some(update) = self.add_license_header(file, &mut content) {
+                self.handle_update(file, &update)?;
             } else {
-                header.push_str(&content);
-            }
-
-            // Put the shebang back (if we had one)
-            match shebang {
-                Some(val) => {
-                    header.insert_str(0, &val);
-                }
-                None => {}
-            }
-
-            if self.config.change_in_place {
-                let mut f = File::create(file)?;
-                f.write_all(header.as_bytes())?;
-            } else {
-                println!("{}", header);
+                self.stats.files_not_licensed.push(file.clone());
             }
         }
 
-        Ok(stats)
+        Ok(self.stats)
+    }
+
+    fn handle_update(&self, file: &String, content: &str) -> Result<(), io::Error> {
+        if self.config.change_in_place {
+            let mut f = File::create(file)?;
+            return f.write_all(content.as_bytes());
+        }
+
+        println!("{}", content);
+        Result::Ok(())
+    }
+
+    fn strip_shebang_if_found(content: &mut String) -> Option<String> {
+        // Can't use Option::map because of double borrow.
+        #[allow(clippy::manual_map)]
+        match Regex::new(r"^#!.*\n")
+            .expect("shebang regex didn't compile!")
+            .find(content)
+        {
+            // If we idenfied a shebang, strip it from content (we'll add it back at the end)
+            Some(shebang_match) => Some(content.drain(..shebang_match.end()).collect()),
+            None => None,
+        }
+    }
+
+    fn check_if_outdated(
+        &self,
+        templ: &Template,
+        commenter: &dyn Comment,
+        content: &str,
+        header: &str,
+    ) -> Option<String> {
+        let outdated_re = templ.outdated_license_pattern(commenter);
+        if outdated_re.is_match(content) {
+            return Some(outdated_re.replace(content, header).to_string());
+        }
+
+        // Account for possible whitespace changes
+        let trimmed_outdated_re = templ.outdated_license_trimmed_pattern(commenter);
+        if trimmed_outdated_re.is_match(content) {
+            Some(trimmed_outdated_re.replace(content, header).to_string())
+        } else {
+            None
+        }
+    }
+
+    fn add_header(&self, mut header: String, content: &mut String) -> String {
+        if let Some(value) = Self::strip_shebang_if_found(content) {
+            println!("Shebang: {}", value);
+            header.insert_str(0, &value);
+        }
+
+        println!("Before: {}", header);
+
+        header.push_str(content);
+        println!("After: {}", header);
+        header
+    }
+
+    fn add_license_header(&mut self, file: &String, content: &mut String) -> Option<String> {
+        let templ = match self.config.licenses.get_template(file) {
+            Some(t) => t,
+            None => {
+                info!("skipping {} because no license config matched.", file);
+                return None;
+            }
+        };
+
+        let commenter = self.config.comments.get_commenter(file);
+
+        let uncommented = templ.render();
+        let header = commenter.comment(&uncommented);
+        if content.contains(&header) || content.contains(header.trim_end()) {
+            info!("{} already licensed", file);
+            return None;
+        }
+
+        if let Some(update) = self.check_if_outdated(&templ, commenter.as_ref(), content, &header) {
+            info!("{} licensed, but year is outdated", file);
+            self.stats.files_needing_license_update.push(file.clone());
+            return Some(update);
+        }
+
+        Some(self.add_header(header, content))
     }
 }
 
@@ -166,5 +141,134 @@ impl LicenseStats {
             files_not_licensed: Vec::new(),
             files_needing_license_update: Vec::new(),
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::config::Config;
+    use crate::{
+        comments::LineComment,
+        template::{test_context, Template},
+    };
+
+    #[test]
+    fn test_detects_outdated_year() {
+        let l = Licensure::new(Config::default());
+        let templ = Template::new("License [year]\n\ntext", test_context("2024"));
+        let commenter = LineComment::new("#", None);
+        let header = commenter.comment(&templ.render());
+        let content = "# License 2020\n#\n# text";
+        let result = l.check_if_outdated(&templ, &commenter, content, &header);
+        assert!(result.is_some());
+    }
+
+    #[test]
+    fn test_detects_outdated_year_trailing_whitespace() {
+        let l = Licensure::new(Config::default());
+        let templ = Template::new("License [year]\n\ntext", test_context("2024"));
+        let commenter = LineComment::new("#", None);
+        let header = commenter.comment(&templ.render());
+        let content = "# License 2020\n#\n# text\n";
+        let result = l.check_if_outdated(&templ, &commenter, content, &header);
+        assert!(result.is_some());
+    }
+
+    #[test]
+    fn test_add_header() {
+        let l = Licensure::new(Config::default());
+        let templ = Template::new("License [year]\n\ntext", test_context("2024"));
+        let commenter = LineComment::new("#", None);
+        let header = commenter.comment(&templ.render());
+        let mut content = r#"
+def main():
+    print('hello world')
+
+if __name__ == '__main__':
+    main()
+"#
+        .to_string();
+        let result = l.add_header(header, &mut content);
+        assert_eq!(
+            result,
+            r#"# License 2024
+#
+# text
+
+def main():
+    print('hello world')
+
+if __name__ == '__main__':
+    main()
+"#
+        )
+    }
+
+    #[test]
+    fn test_add_header_handles_shebang() {
+        let l = Licensure::new(Config::default());
+        let templ = Template::new("License [year]\n\ntext", test_context("2024"));
+        let commenter = LineComment::new("#", None);
+        let header = commenter.comment(&templ.render());
+        let mut content = r#"#!/usr/bin/env python3
+
+def main():
+    print('hello world')
+
+if __name__ == '__main__':
+    main()
+"#
+        .to_string();
+        let expected = r#"#!/usr/bin/env python3
+# License 2024
+#
+# text
+
+def main():
+    print('hello world')
+
+if __name__ == '__main__':
+    main()
+"#;
+
+        let result = l.add_header(header, &mut content);
+        println!("result: {}", result);
+        println!("----------------------");
+        println!("expected: {}", expected);
+        assert_eq!(result, expected)
+    }
+
+    #[test]
+    fn test_add_header_ignores_shebang_in_middle_of_file() {
+        let l = Licensure::new(Config::default());
+        let templ = Template::new("License [year]\n\ntext", test_context("2024"));
+        let commenter = LineComment::new("#", None);
+        let header = commenter.comment(&templ.render());
+        let mut content = r#"
+def main():
+    print('hello world')
+
+#!/usr/bin/env python3
+
+if __name__ == '__main__':
+    main()
+"#
+        .to_string();
+        let expected = r#"# License 2024
+#
+# text
+
+def main():
+    print('hello world')
+
+#!/usr/bin/env python3
+
+if __name__ == '__main__':
+    main()
+"#;
+
+        let result = l.add_header(header, &mut content);
+        assert_eq!(result, expected)
     }
 }
