@@ -107,20 +107,12 @@ impl Template {
         self
     }
 
-    pub fn outdated_license_pattern(
-        &self,
-        commenter: &dyn Comment,
-        columns: Option<usize>,
-    ) -> Regex {
-        self.build_year_varying_regex(commenter, columns, false)
+    pub fn outdated_license_pattern(&self, commenter: &dyn Comment) -> Regex {
+        self.build_year_varying_regex(commenter, false)
     }
 
-    pub fn outdated_license_trimmed_pattern(
-        &self,
-        commenter: &dyn Comment,
-        columns: Option<usize>,
-    ) -> Regex {
-        self.build_year_varying_regex(commenter, columns, true)
+    pub fn outdated_license_trimmed_pattern(&self, commenter: &dyn Comment) -> Regex {
+        self.build_year_varying_regex(commenter, true)
     }
 
     pub fn render(&self) -> String {
@@ -145,19 +137,14 @@ impl Template {
             .replace(ident_repl, &context.ident)
     }
 
-    fn build_year_varying_regex(
-        &self,
-        commenter: &dyn Comment,
-        columns: Option<usize>,
-        trim_trailing: bool,
-    ) -> Regex {
+    fn build_year_varying_regex(&self, commenter: &dyn Comment, trim_trailing: bool) -> Regex {
         let mut context = self.context.clone();
 
         // interpolate the header with the intermediate year token
         context.year = Some(INTERMEDIATE_YEAR_TOKEN.to_string());
 
         let interpolated_header = self.interpolate(&context);
-        let mut rendered = commenter.comment(&interpolated_header, columns);
+        let mut rendered = commenter.comment(&interpolated_header);
 
         if trim_trailing {
             rendered = rendered.trim_end().to_string();

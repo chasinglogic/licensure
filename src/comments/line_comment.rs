@@ -3,13 +3,15 @@ use super::Comment;
 pub struct LineComment {
     character: String,
     trailing_lines: usize,
+    cols: Option<usize>,
 }
 
 impl LineComment {
-    pub fn new(character: &str) -> LineComment {
+    pub fn new(character: &str, cols: Option<usize>) -> LineComment {
         LineComment {
             character: String::from(character),
             trailing_lines: 0,
+            cols,
         }
     }
 
@@ -25,13 +27,14 @@ impl LineComment {
 }
 
 impl Comment for LineComment {
-    fn comment(&self, text: &str, columns: Option<usize>) -> String {
-        let local_copy = if let Some(cols) = columns {
-            // Subtract two columns to account for the comment
-            // character and space we will add later.
-            textwrap::fill(text, if cols > 2 { cols - 2 } else { cols })
-        } else {
-            text.to_string()
+    fn comment(&self, text: &str) -> String {
+        let local_copy = match self.cols {
+            Some(cols) => {
+                // Subtract two columns to account for the comment
+                // character and space we will add later.
+                textwrap::fill(text, if cols > 2 { cols - 2 } else { cols })
+            }
+            None => text.to_string(),
         };
 
         let mut lines: Vec<&str> = local_copy.split('\n').collect();

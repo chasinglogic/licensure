@@ -81,7 +81,8 @@ impl Config {
                 comment_char,
                 trailing_lines,
             } => Box::new(
-                LineComment::new(comment_char.as_str()).set_trailing_lines(*trailing_lines),
+                LineComment::new(comment_char.as_str(), self.get_columns())
+                    .set_trailing_lines(*trailing_lines),
             ),
             Commenter::Block {
                 start_block_char,
@@ -89,8 +90,12 @@ impl Config {
                 per_line_char,
                 trailing_lines,
             } => {
-                let mut bc = BlockComment::new(start_block_char.as_str(), end_block_char.as_str())
-                    .set_trailing_lines(*trailing_lines);
+                let mut bc = BlockComment::new(
+                    start_block_char.as_str(),
+                    end_block_char.as_str(),
+                    self.get_columns(),
+                )
+                .set_trailing_lines(*trailing_lines);
 
                 if let Some(ch) = per_line_char {
                     bc = bc.with_per_line(ch.as_str());

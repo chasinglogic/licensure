@@ -90,18 +90,16 @@ impl From<Vec<CommentConfig>> for CommentConfigList {
 }
 
 impl CommentConfigList {
-    pub fn get_commenter(&self, filename: &str) -> (CommentConfig, Box<dyn Comment>) {
+    pub fn get_commenter(&self, filename: &str) -> Box<dyn Comment> {
         let file_type = get_filetype(filename);
 
         for c in &self.cfgs {
             if c.matches(file_type) {
-                let cfg = c.clone();
-                return (cfg, c.commenter());
+                return c.commenter();
             }
         }
 
-        let def = CommentConfig::default();
-        (def, CommentConfig::default().commenter())
+        CommentConfig::default().commenter()
     }
 }
 

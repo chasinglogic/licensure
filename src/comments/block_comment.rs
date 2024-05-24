@@ -7,15 +7,17 @@ pub struct BlockComment {
     end: String,
     per_line: Option<Box<dyn Comment>>,
     trailing_lines: usize,
+    cols: Option<usize>,
 }
 
 impl BlockComment {
-    pub fn new(start: &str, end: &str) -> BlockComment {
+    pub fn new(start: &str, end: &str, cols: Option<usize>) -> BlockComment {
         BlockComment {
             start: String::from(start),
             end: String::from(end),
             per_line: None,
             trailing_lines: 0,
+            cols,
         }
     }
 
@@ -25,22 +27,24 @@ impl BlockComment {
     }
 
     pub fn with_per_line(mut self, per_line: &str) -> BlockComment {
-        self.per_line = Some(Box::new(LineComment::new(per_line).skip_trailing_lines()));
+        self.per_line = Some(Box::new(
+            LineComment::new(per_line, self.cols).skip_trailing_lines(),
+        ));
         self
     }
 }
 
 impl Comment for BlockComment {
-    fn comment(&self, text: &str, columns: Option<usize>) -> String {
+    fn comment(&self, text: &str) -> String {
         let mut new_text = self.start.clone();
         let wrapped_text;
 
         match self.per_line {
             Some(ref commenter) => {
-                let commented_text = commenter.comment(text, columns);
+                let commented_text = commenter.comment(text);
                 new_text.push_str(&commented_text);
             }
-            None => new_text.push_str(match columns {
+            None => new_text.push_str(match self.cols {
                 Some(cols) => {
                     wrapped_text = textwrap::fill(text, cols);
                     wrapped_text.as_str()

@@ -20,7 +20,7 @@ mod block_comment;
 mod line_comment;
 
 pub trait Comment {
-    fn comment(&self, text: &str, columns: Option<usize>) -> String;
+    fn comment(&self, text: &str) -> String;
 }
 
 #[cfg(test)]
@@ -41,7 +41,7 @@ it looked super dapper
 # the cat wore a top hat
 # it looked super dapper
 ",
-            LineComment::new("#").comment(EX_TEXT, None)
+            LineComment::new("#", None).comment(EX_TEXT)
         )
     }
 
@@ -55,9 +55,9 @@ it looked super dapper
 
 
 ",
-            LineComment::new("#")
+            LineComment::new("#", None)
                 .set_trailing_lines(2)
-                .comment(EX_TEXT, None)
+                .comment(EX_TEXT)
         )
     }
 
@@ -70,9 +70,9 @@ it looked super dapper
 * the cat wore a top hat
 * it looked super dapper
 */",
-            BlockComment::new("/*\n", "*/")
+            BlockComment::new("/*\n", "*/", None)
                 .with_per_line("*")
-                .comment(EX_TEXT, None)
+                .comment(EX_TEXT)
         )
     }
 
@@ -87,10 +87,10 @@ it looked super dapper
 */
 
 ",
-            BlockComment::new("/*\n", "*/")
+            BlockComment::new("/*\n", "*/", None)
                 .with_per_line("*")
                 .set_trailing_lines(2)
-                .comment(EX_TEXT, None)
+                .comment(EX_TEXT)
         )
     }
 
@@ -103,7 +103,7 @@ with a very nice cat
 the cat wore a top hat
 it looked super dapper
 -->",
-            BlockComment::new("<!--\n", "-->").comment(EX_TEXT, None)
+            BlockComment::new("<!--\n", "-->", None).comment(EX_TEXT)
         )
     }
 }
