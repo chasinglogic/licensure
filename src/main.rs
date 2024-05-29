@@ -196,7 +196,8 @@ More information is available at: {}",
         config.change_in_place = true;
     }
 
-    match Licensure::new(config).license_files(&files) {
+    let licensure = Licensure::new(config).with_check_mode(matches.is_present("check"));
+    match licensure.license_files(&files) {
         Err(e) => {
             println!("Failed to license files: {}", e);
             process::exit(1);
