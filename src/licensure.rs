@@ -23,14 +23,27 @@ use crate::template::Template;
 pub struct Licensure {
     config: Config,
     stats: LicenseStats,
+    check_mode: bool,
+}
+
+enum LicenseStatus {
+    NeedsUpdate(String),
+    AlreadyLicensed,
+    NoConfigMatched,
 }
 
 impl Licensure {
     pub fn new(config: Config) -> Licensure {
         Licensure {
             config,
+            check_mode: false,
             stats: LicenseStats::new(),
         }
+    }
+
+    pub fn with_check_mode(mut self, check_mode: bool) -> Licensure {
+        self.check_mode = check_mode;
+        self
     }
 
     pub fn license_files(mut self, files: &[String]) -> Result<LicenseStats, io::Error> {
@@ -48,10 +61,10 @@ impl Licensure {
                 f.read_to_string(&mut content)?;
             }
 
-            if let Some(update) = self.add_license_header(file, &mut content) {
-                self.handle_update(file, &update)?;
-            } else {
-                self.stats.files_not_licensed.push(file.clone());
+            match self.add_license_header(file, &mut content) {
+                LicenseStatus::NeedsUpdate(update) => self.handle_update(file, &update)?,
+                LicenseStatus::NoConfigMatched => self.stats.files_not_licensed.push(file.clone()),
+                LicenseStatus::AlreadyLicensed => continue,
             }
         }
 
@@ -59,6 +72,10 @@ impl Licensure {
     }
 
     fn handle_update(&self, file: &String, content: &str) -> Result<(), io::Error> {
+        if self.check_mode {
+            return Result::Ok(());
+        }
+
         if self.config.change_in_place {
             let mut f = File::create(file)?;
             return f.write_all(content.as_bytes());
@@ -108,19 +125,16 @@ impl Licensure {
             header.insert_str(0, &value);
         }
 
-        println!("Before: {}", header);
-
         header.push_str(content);
-        println!("After: {}", header);
         header
     }
 
-    fn add_license_header(&mut self, file: &String, content: &mut String) -> Option<String> {
+    fn add_license_header(&mut self, file: &String, content: &mut String) -> LicenseStatus {
         let templ = match self.config.licenses.get_template(file) {
             Some(t) => t,
             None => {
                 info!("skipping {} because no license config matched.", file);
-                return None;
+                return LicenseStatus::NoConfigMatched;
             }
         };
 
@@ -130,16 +144,17 @@ impl Licensure {
         let header = commenter.comment(&uncommented);
         if content.contains(&header) || content.contains(header.trim_end()) {
             info!("{} already licensed", file);
-            return None;
+            return LicenseStatus::AlreadyLicensed;
         }
 
         if let Some(update) = self.check_if_outdated(&templ, commenter.as_ref(), content, &header) {
             info!("{} licensed, but year is outdated", file);
             self.stats.files_needing_license_update.push(file.clone());
-            return Some(update);
+            return LicenseStatus::NeedsUpdate(update);
         }
 
-        Some(self.add_header(header, content))
+        self.stats.files_needing_license_update.push(file.clone());
+        LicenseStatus::NeedsUpdate(self.add_header(header, content))
     }
 }
 
