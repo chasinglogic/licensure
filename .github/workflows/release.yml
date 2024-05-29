@@ -77,12 +77,6 @@ jobs:
           echo "target flag is: ${{ env.TARGET_FLAGS }}"
           echo "target dir is: ${{ env.TARGET_DIR }}"
 
-      - name: Install system dependencies
-        if: matrix.build == 'linux'
-        run: |
-          sudo apt update
-          sudo apt install pkg-config libssl-dev
-
       - name: Build release binary
         run: ${{ env.CARGO }} build --verbose --release ${{ env.TARGET_FLAGS }}
 
