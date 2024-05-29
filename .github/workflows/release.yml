@@ -39,6 +39,9 @@ jobs:
       TARGET_FLAGS: "--target ${{ matrix.target }}"
       TARGET_DIR: ./target/${{ matrix.target }}
     strategy:
+      # Just because one OS isn't building doesn't mean we shouldn't build the
+      # rest.
+      fail-fast: false
       matrix:
         build: [linux, linux-arm, macos]
         include:
