@@ -11,7 +11,7 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 //
-use std::process;
+use std::process::{self, Command};
 
 use regex::Regex;
 use serde::Deserialize;
@@ -76,7 +76,11 @@ pub struct Config {
 
     ident: String,
     authors: Authors,
-    year: Option<String>,
+    #[serde(alias = "year")]
+    end_year: Option<String>,
+    start_year: Option<String>,
+    #[serde(default = "default_dynamic_year_ranges")]
+    use_dynamic_year_ranges: bool,
 
     template: Option<String>,
     auto_template: Option<bool>,
@@ -87,6 +91,10 @@ pub struct Config {
 
 fn default_unwrap_text() -> bool {
     true
+}
+
+fn default_dynamic_year_ranges() -> bool {
+    false
 }
 
 impl Config {
@@ -138,7 +146,7 @@ impl Config {
         }
     }
 
-    pub fn get_template(&self) -> Template {
+    pub fn get_template(&self, filename: &str) -> Template {
         let auto_templ;
         let t = match &self.template {
             Some(ref t) => t,
@@ -153,11 +161,39 @@ impl Config {
             }
         };
 
+        let (end_year, start_year) = if self.use_dynamic_year_ranges {
+            let dates = get_git_dates_for_file(filename);
+            let (last_updated_date, created_date) = match &dates[..] {
+                [first_date, .., last_date] => (first_date, last_date),
+                [first_date] => (first_date, first_date),
+                _ => panic!("Did not get any dates from git!"),
+            };
+
+            // Git formats the dates such that we get "Wed May 29 04:54:58 2024 +0100" we only care
+            // about the 4th "field" which is the year.
+            let created_year = created_date
+                .split(' ')
+                .nth(4)
+                .expect("Unable to parse created year!");
+            let last_updated_year = last_updated_date
+                .split(' ')
+                .nth(4)
+                .expect("Unable to parse last updated year!");
+
+            (
+                Some(last_updated_year.to_string()),
+                Some(created_year.to_string()),
+            )
+        } else {
+            (self.end_year.clone(), self.start_year.clone())
+        };
+
         let t = Template::new(
             t,
             Context {
+                end_year,
+                start_year,
                 ident: self.ident.clone(),
-                year: self.year.clone(),
                 authors: self.authors.clone(),
                 unwrap_text: self.unwrap_text,
             },
@@ -168,5 +204,28 @@ impl Config {
         }
 
         t
+    }
+}
+
+fn get_git_dates_for_file(filename: &str) -> Vec<String> {
+    match Command::new("git")
+        .arg("log")
+        .arg("--follow")
+        .arg("--format=%ad")
+        .args(["--date", "default"])
+        .arg(filename)
+        .output()
+    {
+        Ok(proc) => String::from_utf8(proc.stdout)
+            .expect("git log output was not UTF-8!")
+            .split('\n')
+            .map(str::to_string)
+            .filter(|s| !s.is_empty())
+            .collect(),
+        Err(e) => {
+            println!("Failed to run git log to get file dates. Make sure you're in a git repo.");
+            println!("{}", e);
+            process::exit(1)
+        }
     }
 }

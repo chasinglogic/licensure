@@ -70,7 +70,8 @@ impl fmt::Display for Authors {
 pub struct Context {
     pub ident: String,
     pub authors: Authors,
-    pub year: Option<String>,
+    pub end_year: Option<String>,
+    pub start_year: Option<String>,
     pub unwrap_text: bool,
 }
 
@@ -80,9 +81,14 @@ impl Context {
     }
 
     fn get_year(&self) -> String {
-        match &self.year {
+        let end_year = match &self.end_year {
             Some(year) => year.clone(),
             None => format!("{}", Local::now().year()),
+        };
+
+        match &self.start_year {
+            Some(start_year) => format!("{}, {}", start_year, end_year),
+            _ => end_year,
         }
     }
 }
@@ -154,7 +160,10 @@ impl Template {
         let mut context = self.context.clone();
 
         // interpolate the header with the intermediate year token
-        context.year = Some(INTERMEDIATE_YEAR_TOKEN.to_string());
+        context.end_year = Some(INTERMEDIATE_YEAR_TOKEN.to_string());
+        if context.start_year.is_some() {
+            context.start_year = Some(INTERMEDIATE_YEAR_TOKEN.to_string());
+        }
 
         let interpolated_header = self.interpolate(&context);
         let mut rendered = commenter.comment(&interpolated_header);
@@ -219,7 +228,8 @@ pub fn test_context(year: &str) -> Context {
     Context {
         ident: String::from("test"),
         authors: Authors::from(vec![]),
-        year: Some(String::from(year)),
+        end_year: Some(String::from(year)),
+        start_year: None,
         unwrap_text: true,
     }
 }
@@ -282,7 +292,8 @@ mod tests {
                 name: "Mathew Robinson".to_string(),
                 email: Some("chasinglogic@gmail.com".to_string()),
             }]),
-            year: Some(String::from("2020")),
+            end_year: Some(String::from("2020")),
+            start_year: None,
             unwrap_text: true,
         };
         let template = Template::new("Copyright (C) [year] [name of author] This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, version 3. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>", context);
@@ -298,7 +309,8 @@ mod tests {
                 name: "Mathew Robinson".to_string(),
                 email: Some("chasinglogic@gmail.com".to_string()),
             }]),
-            year: Some(String::from("2022")),
+            end_year: Some(String::from("2022")),
+            start_year: None,
             unwrap_text: true,
         };
         let template = Template::new(
@@ -318,7 +330,8 @@ mod tests {
                 name: "Mathew Robinson".to_string(),
                 email: Some("chasinglogic@gmail.com".to_string()),
             }]),
-            year: Some(String::from("2022")),
+            end_year: Some(String::from("2022")),
+            start_year: None,
             unwrap_text: true,
         };
         let template = Template::new(
@@ -343,7 +356,8 @@ mod tests {
                 name: "Mathew Robinson".to_string(),
                 email: Some("chasinglogic@gmail.com".to_string()),
             }]),
-            year: Some(String::from("2020")),
+            end_year: Some(String::from("2020")),
+            start_year: None,
             unwrap_text: true,
         };
         let template = Template::new(
@@ -371,7 +385,8 @@ this program. If not, see <https://www.gnu.org/licenses/>",
                 name: "Mathew Robinson".to_string(),
                 email: Some("chasinglogic@gmail.com".to_string()),
             }]),
-            year: Some(String::from("2020")),
+            end_year: Some(String::from("2020")),
+            start_year: None,
             unwrap_text: false,
         };
         let template = Template::new(
@@ -394,7 +409,8 @@ this program. If not, see <https://www.gnu.org/licenses/>",
                 name: "Mathew Robinson".to_string(),
                 email: Some("chasinglogic@gmail.com".to_string()),
             }]),
-            year: Some(String::from("2020")),
+            end_year: Some(String::from("2020")),
+            start_year: None,
             unwrap_text: true,
         };
         let template = Template::new(
