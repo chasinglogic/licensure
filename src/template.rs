@@ -70,7 +70,9 @@ impl fmt::Display for Authors {
 pub struct Context {
     pub ident: String,
     pub authors: Authors,
-    pub year: Option<String>,
+    #[serde(alias = "year")]
+    pub end_year: Option<String>,
+    pub start_year: Option<String>,
     pub unwrap_text: bool,
 }
 
@@ -80,9 +82,14 @@ impl Context {
     }
 
     fn get_year(&self) -> String {
-        match &self.year {
+        let end_year = match &self.end_year {
             Some(year) => year.clone(),
             None => format!("{}", Local::now().year()),
+        };
+
+        match &self.start_year {
+            Some(start_year) => format!("{}, {}", start_year, end_year),
+            _ => end_year,
         }
     }
 }
@@ -154,7 +161,10 @@ impl Template {
         let mut context = self.context.clone();
 
         // interpolate the header with the intermediate year token
-        context.year = Some(INTERMEDIATE_YEAR_TOKEN.to_string());
+        context.end_year = Some(INTERMEDIATE_YEAR_TOKEN.to_string());
+        if context.use_dynamic_year_ranges || context.start_year.is_some() {
+            context.start_year = Some(INTERMEDIATE_YEAR_TOKEN.to_string());
+        }
 
         let interpolated_header = self.interpolate(&context);
         let mut rendered = commenter.comment(&interpolated_header);
