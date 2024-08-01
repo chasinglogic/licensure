@@ -87,7 +87,7 @@ impl Context {
         };
 
         match &self.start_year {
-            Some(start_year) => format!("{}, {}", start_year, end_year),
+            Some(start_year) if *start_year != end_year => format!("{}, {}", start_year, end_year),
             _ => end_year,
         }
     }
