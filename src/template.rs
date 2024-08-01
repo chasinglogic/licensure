@@ -110,7 +110,7 @@ pub struct Template {
 const INTERMEDIATE_YEAR_TOKEN: &str = "@YR@";
 
 // Matches any full 4-digit year
-const YEAR_RE: &str = "[0-9]{4}";
+const YEAR_RE: &str = "[0-9]{4}(, [0-9]{4})?";
 
 impl Template {
     pub fn new(template: &str, context: Context) -> Template {
@@ -161,9 +161,8 @@ impl Template {
 
         // interpolate the header with the intermediate year token
         context.end_year = Some(INTERMEDIATE_YEAR_TOKEN.to_string());
-        if context.start_year.is_some() {
-            context.start_year = Some(INTERMEDIATE_YEAR_TOKEN.to_string());
-        }
+        // The year regex accounts for ranges so we don't need to worry about start_year here.
+        context.start_year = None;
 
         let interpolated_header = self.interpolate(&context);
         let mut rendered = commenter.comment(&interpolated_header);
@@ -235,6 +234,17 @@ pub fn test_context(year: &str) -> Context {
 }
 
 #[cfg(test)]
+pub fn test_context_with_range(start_year: &str, end_year: &str) -> Context {
+    Context {
+        ident: String::from("test"),
+        authors: Authors::from(vec![]),
+        end_year: Some(String::from(end_year)),
+        start_year: Some(String::from(start_year)),
+        unwrap_text: true,
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use crate::comments::LineComment;
 
@@ -246,7 +256,7 @@ mod tests {
         let template = Template::new("License [year]\n\ntext", context);
         let commenter = LineComment::new("#", None);
         let rgx = template.outdated_license_pattern(&commenter);
-        let expected = Regex::new("\\# License [0-9]{4}\n\\#\n\\# text\n")
+        let expected = Regex::new("\\# License [0-9]{4}(, [0-9]{4})?\n\\#\n\\# text\n")
             .expect("This should have compiled?");
 
         assert_eq!(rgx.to_string(), expected.to_string());
@@ -264,8 +274,8 @@ mod tests {
         let template = Template::new("License [year]\n\ntext", context);
         let commenter = LineComment::new("#", None);
         let rgx = template.outdated_license_trimmed_pattern(&commenter);
-        let expected =
-            Regex::new("\\# License [0-9]{4}\n\\#\n\\# text").expect("This should have compiled?");
+        let expected = Regex::new("\\# License [0-9]{4}(, [0-9]{4})?\n\\#\n\\# text")
+            .expect("This should have compiled?");
 
         assert_eq!(rgx.to_string(), expected.to_string());
         assert!(rgx.is_match(
@@ -429,6 +439,23 @@ this program. If not, see <https://www.gnu.org/licenses/>",
         let expected = String::from("Copyright (C) 2020 Mathew Robinson <chasinglogic@gmail.com> This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the
 
 Free Software Foundation, version 3. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>");
+        assert_eq!(expected, template.render())
+    }
+
+    #[test]
+    fn test_substitutions_year_ranges() {
+        let context = Context {
+            ident: String::from("test"),
+            authors: Authors::from(vec![CopyrightHolder {
+                name: "Mathew Robinson".to_string(),
+                email: Some("chasinglogic@gmail.com".to_string()),
+            }]),
+            end_year: Some(String::from("2024")),
+            start_year: Some(String::from("2020")),
+            unwrap_text: true,
+        };
+        let template = Template::new("Copyright (C) [year] [name of author] This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, version 3. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>", context);
+        let expected = String::from("Copyright (C) 2020, 2024 Mathew Robinson <chasinglogic@gmail.com> This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, version 3. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>");
         assert_eq!(expected, template.render())
     }
 }
