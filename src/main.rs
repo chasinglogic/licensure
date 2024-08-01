@@ -63,7 +63,7 @@ fn git_ls_files(extra_args: Vec<&str>) -> Vec<String> {
         .output()
     {
         Ok(proc) => String::from_utf8(proc.stdout)
-            .unwrap()
+            .expect("git ls-files output was not UTF-8!")
             .split('\n')
             // git-ls still returns the removed files that are not committed, so we filter those out.
             .filter(|s| !s.is_empty() && Path::new(s).exists())

@@ -106,6 +106,8 @@ impl Licensure {
         header: &str,
     ) -> Option<String> {
         let outdated_re = templ.outdated_license_pattern(commenter);
+        println!("{}", content);
+        println!("{:?}", outdated_re);
         if outdated_re.is_match(content) {
             return Some(outdated_re.replace(content, header).to_string());
         }
@@ -176,6 +178,7 @@ impl LicenseStats {
 mod test {
     use super::*;
     use crate::config::Config;
+    use crate::template::test_context_with_range;
     use crate::{
         comments::LineComment,
         template::{test_context, Template},
@@ -185,6 +188,34 @@ mod test {
     fn test_detects_outdated_year() {
         let l = Licensure::new(Config::default());
         let templ = Template::new("License [year]\n\ntext", test_context("2024"));
+        let commenter = LineComment::new("#", None);
+        let header = commenter.comment(&templ.render());
+        let content = "# License 2020\n#\n# text";
+        let result = l.check_if_outdated(&templ, &commenter, content, &header);
+        assert!(result.is_some());
+    }
+
+    #[test]
+    fn test_detects_outdated_year_range() {
+        let l = Licensure::new(Config::default());
+        let templ = Template::new(
+            "License [year]\n\ntext",
+            test_context_with_range("2020", "2024"),
+        );
+        let commenter = LineComment::new("#", None);
+        let header = commenter.comment(&templ.render());
+        let content = "# License 2020, 2023\n#\n# text";
+        let result = l.check_if_outdated(&templ, &commenter, content, &header);
+        assert!(result.is_some());
+    }
+
+    #[test]
+    fn test_detects_outdated_year_range_when_previous_header_wasnt_a_range() {
+        let l = Licensure::new(Config::default());
+        let templ = Template::new(
+            "License [year]\n\ntext",
+            test_context_with_range("2020", "2024"),
+        );
         let commenter = LineComment::new("#", None);
         let header = commenter.comment(&templ.render());
         let content = "# License 2020\n#\n# text";

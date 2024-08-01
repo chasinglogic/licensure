@@ -32,14 +32,15 @@ mod comment;
 mod default;
 mod license;
 
-fn def_change_in_place() -> bool {
+fn default_off() -> bool {
     false
 }
 
 #[derive(Deserialize, Debug)]
 pub struct Config {
-    #[serde(default = "def_change_in_place")]
+    #[serde(default = "default_off")]
     pub change_in_place: bool,
+
     pub excludes: RegexList,
     pub licenses: LicenseConfigList,
     pub comments: CommentConfigList,
@@ -132,7 +133,7 @@ impl LicenseConfigList {
     pub fn get_template(&self, filename: &str) -> Option<Template> {
         for cfg in &self.cfgs {
             if cfg.file_is_match(filename) {
-                return Some(cfg.get_template());
+                return Some(cfg.get_template(filename));
             }
         }
 
