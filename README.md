@@ -298,6 +298,26 @@ licenses:
       found in the LICENSE file.
 ```
 
+##### Year ranges
+
+You can specify a year range for your copyright instead by using the start_year
+configuration option. If provided Licensure will put a year range in your
+copyright. An example with a `start_year` value of `2019` would look like so:
+
+```
+Copyright 2019, 2024 ...
+```
+
+The `end_year` can also be specified but if omitted will automatically be
+updated to be the current year per your local system time. 
+
+###### Automated year ranges
+
+If you want per-file year ranges or just automated ones you can opt in with the
+`use_dynamic_year_ranges: true` setting. This will use `git` commit information
+to determine a files created and last updated year. It will then license that
+file with a year range specific to it based on the `git` information.
+
 #### comments
 
 The comments section is a list of comment configuration
@@ -433,7 +453,7 @@ The best up to date minimal example configuration is the one for
 This code is distributed under the GNU General Public License
 
 ```
-    Copyright (C) 2019 Mathew Robinson
+    Copyright (C) 2024 Mathew Robinson
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
