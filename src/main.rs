@@ -17,10 +17,10 @@ extern crate clap;
 #[macro_use]
 extern crate log;
 extern crate regex;
-extern crate reqwest;
 extern crate serde;
 extern crate serde_yaml;
 extern crate textwrap;
+extern crate ureq;
 
 use std::fs::File;
 use std::io::prelude::*;

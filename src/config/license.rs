@@ -103,46 +103,45 @@ impl Config {
     }
 
     fn fetch_template(&self) -> String {
-        let r =
-            match reqwest::blocking::get(format!("https://spdx.org/licenses/{}.json", &self.ident))
-            {
-                Ok(r) => r,
-                Err(e) => {
-                    println!("Failed to fetch license template from SPDX: {}", e);
-                    process::exit(1);
-                }
-            };
+        let url = format!("https://spdx.org/licenses/{}.json", &self.ident);
+        let response = match ureq::get(&url).call() {
+            Ok(r) => r,
+            Err(e) => {
+                println!("Failed to fetch license template from SPDX: {}", e);
+                process::exit(1);
+            }
+        };
 
-        match r.status() {
-            reqwest::StatusCode::NOT_FOUND => {
+        match response.status() {
+            404 => {
                 println!(
                     "{} does not appear to be a valid SPDX identifier, go to https://spdx.org/licenses/ to view a list of valid identifiers",
                     &self.ident
                 );
                 process::exit(1)
             }
-            reqwest::StatusCode::OK => (),
+            200 => (),
             _ => {
                 println!(
                     "Failed to fetch license template from SPDX for {}: {:?}",
                     &self.ident,
-                    r.status()
+                    response.status()
                 );
                 process::exit(1);
             }
         }
 
-        let json: SPDXLicenseInfo = match r.json() {
-            Ok(j) => j,
-            Err(e) => {
-                println!("Failed to deserialize SPDX JSON: {}", e);
+        let license_info: SPDXLicenseInfo = match response.into_json() {
+            Ok(json) => json,
+            Err(err) => {
+                println!("Failed to deserialize SPDX JSON: {}", err);
                 process::exit(1);
             }
         };
 
-        match json.license_header {
+        match license_info.license_header {
             Some(header) => header,
-            None => json.license_text,
+            None => license_info.license_text,
         }
     }
 
