@@ -13,6 +13,7 @@
 //
 use std::process::{self, Command};
 
+use chrono::Local;
 use regex::Regex;
 use serde::Deserialize;
 
@@ -161,11 +162,15 @@ impl Config {
         };
 
         let (end_year, start_year) = if self.use_dynamic_year_ranges {
+            let now_date = Local::now().format("%a %b %d %T %Y %z").to_string();
             let dates = get_git_dates_for_file(filename);
             let (last_updated_date, created_date) = match &dates[..] {
                 [first_date, .., last_date] => (first_date, last_date),
                 [first_date] => (first_date, first_date),
-                _ => panic!("Did not get any dates from git!"),
+                _ => {
+                    debug!("Did not get any dates from git for file: {}", filename);
+                    (&now_date, &now_date)
+                }
             };
 
             // Git formats the dates such that we get "Wed May 29 04:54:58 2024 +0100" we only care
