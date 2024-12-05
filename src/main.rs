@@ -208,14 +208,20 @@ More information is available at: {}",
                     && stats.files_needing_license_update.is_empty())
             {
                 if !stats.files_needing_license_update.is_empty() {
-                    eprintln!("The following files' licenses need to be updated");
+                    eprintln!(
+                        "The following {} files' licenses need to be updated",
+                        stats.files_needing_license_update.len()
+                    );
                     for file in stats.files_needing_license_update {
                         eprintln!("{}", file);
                     }
                 }
 
                 if !stats.files_not_licensed.is_empty() {
-                    eprintln!("The following files were not licensed with the given config.");
+                    eprintln!(
+                        "The following {} files were not licensed with the given config.",
+                        stats.files_not_licensed.len()
+                    );
                     for file in stats.files_not_licensed {
                         eprintln!("{}", file);
                     }
