@@ -358,6 +358,12 @@ extensions:
   - go
 ```
 
+##### Files Configuration
+
+An optional list of regular expressions which, if specified, restrict what files
+this commenter applies to. This commenter will only apply to files which match
+one of the given regular expressions.
+
 ##### Commenter Configuration
 
 The commenter field defines the kind of commenter to

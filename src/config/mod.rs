@@ -58,7 +58,7 @@ impl Default for Config {
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Default, Clone)]
 #[serde(from = "Vec<String>")]
 pub struct RegexList {
     regex: RegexSet,
@@ -114,7 +114,7 @@ impl CommentConfigList {
         let file_type = get_filetype(filename);
 
         for c in &self.cfgs {
-            if c.matches(file_type) {
+            if c.matches(file_type, filename) {
                 return c.commenter();
             }
         }

@@ -17,6 +17,8 @@ use crate::comments::BlockComment;
 use crate::comments::Comment;
 use crate::comments::LineComment;
 
+use super::RegexList;
+
 fn def_trailing_lines() -> usize {
     0
 }
@@ -68,6 +70,8 @@ impl FileType {
 pub struct Config {
     #[serde(alias = "extensions")]
     extension: FileType,
+    #[serde(default)]
+    files: Option<RegexList>,
     columns: Option<usize>,
     commenter: Commenter,
 }
@@ -76,6 +80,7 @@ impl Config {
     pub fn default() -> Config {
         Config {
             extension: FileType::Single("any".to_string()),
+            files: None,
             columns: None,
             commenter: Commenter::Line {
                 comment_char: "#".to_string(),
@@ -84,8 +89,16 @@ impl Config {
         }
     }
 
-    pub fn matches(&self, file_type: &str) -> bool {
-        self.extension.matches(file_type)
+    pub fn matches(&self, file_type: &str, filename: &str) -> bool {
+        if self.extension.matches(file_type) {
+            if let Some(files) = &self.files {
+                files.is_match(filename)
+            } else {
+                true
+            }
+        } else {
+            false
+        }
     }
 
     pub fn commenter(&self) -> Box<dyn Comment> {
