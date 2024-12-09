@@ -238,6 +238,10 @@ More information is available at: {}",
 
                 process::exit(1);
             }
+
+            if !stats.files_not_licensed.is_empty() {
+                process::exit(1);
+            }
         }
     }
 }
