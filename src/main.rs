@@ -236,6 +236,16 @@ More information is available at: {}",
                     }
                 }
 
+                if !stats.files_needing_commenter.is_empty() {
+                    eprintln!(
+                        "The following {} files did not have a commenter with the given config.",
+                        stats.files_needing_commenter.len()
+                    );
+                    for file in stats.files_needing_commenter {
+                        eprintln!("{}", file);
+                    }
+                }
+
                 process::exit(1);
             }
         }
