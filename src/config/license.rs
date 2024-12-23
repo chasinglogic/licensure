@@ -86,6 +86,9 @@ pub struct Config {
     template: Option<String>,
     auto_template: Option<bool>,
 
+    #[serde(with = "serde_regex", default)]
+    replaces: Option<Vec<Regex>>,
+
     #[serde(default = "default_unwrap_text")]
     unwrap_text: bool,
 }
@@ -208,6 +211,10 @@ impl Config {
         }
 
         t
+    }
+
+    pub fn get_replaces(&self) -> &Option<Vec<Regex>> {
+        &self.replaces
     }
 }
 

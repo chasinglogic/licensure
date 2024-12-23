@@ -17,6 +17,7 @@ use std::io;
 use std::path::PathBuf;
 use std::process;
 
+use regex::Regex;
 use regex::RegexSet;
 use serde::Deserialize;
 
@@ -134,6 +135,16 @@ impl LicenseConfigList {
         for cfg in &self.cfgs {
             if cfg.file_is_match(filename) {
                 return Some(cfg.get_template(filename));
+            }
+        }
+
+        None
+    }
+
+    pub fn get_replaces(&self, filename: &str) -> Option<&Vec<Regex>> {
+        for cfg in &self.cfgs {
+            if cfg.file_is_match(filename) {
+                return cfg.get_replaces().as_ref();
             }
         }
 
