@@ -54,6 +54,10 @@ fn get_project_files() -> Vec<String> {
     files.append(&mut new_unstaged_files);
 
     files
+        .iter()
+        .filter(|x| !Path::new(*x).is_symlink())
+        .map(|x| x.to_string())
+        .collect()
 }
 
 fn git_ls_files(extra_args: Vec<&str>) -> Vec<String> {
