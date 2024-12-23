@@ -39,6 +39,6 @@ So is this.";
 
         let expected = "some wrapped text to unwrap.\n\nThe line above \
         is an intentional line break.\n\nSo is this.";
-        assert_eq!(expected, remove_column_wrapping(&content))
+        assert_eq!(expected, remove_column_wrapping(content))
     }
 }

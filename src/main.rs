@@ -132,7 +132,9 @@ More information is available at: {}",
     match matches.occurrences_of("verbose") {
         0 => (),
         x => simplelog::SimpleLogger::init(
-            if x > 2 {
+            if x > 3 {
+                simplelog::LevelFilter::Trace
+            } else if x > 2 {
                 simplelog::LevelFilter::Debug
             } else {
                 simplelog::LevelFilter::Info
@@ -233,6 +235,6 @@ mod test {
 
     #[test]
     fn test_get_project_files() {
-        assert!(get_project_files().len() != 0)
+        assert!(!get_project_files().is_empty())
     }
 }

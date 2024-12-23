@@ -26,7 +26,7 @@ pub trait Comment {
 mod tests {
     use super::*;
 
-    const EX_TEXT: &'static str = "There once was a man
+    const EX_TEXT: &str = "There once was a man
 with a very nice cat
 the cat wore a top hat
 it looked super dapper

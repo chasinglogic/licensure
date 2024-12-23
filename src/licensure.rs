@@ -55,6 +55,8 @@ impl Licensure {
                 continue;
             }
 
+            trace!("Working on file: {}", &file);
+
             let mut content = String::new();
             {
                 let mut f = File::open(file)?;
@@ -106,14 +108,16 @@ impl Licensure {
         header: &str,
     ) -> Option<String> {
         let outdated_re = templ.outdated_license_pattern(commenter);
-        println!("{}", content);
-        println!("{:?}", outdated_re);
+        // trace!("Content: {}", content);
+        // trace!("Outdated Regex: {:?}", outdated_re);
+        // trace!("Header: {:?}", header);
         if outdated_re.is_match(content) {
             return Some(outdated_re.replace(content, header).to_string());
         }
 
         // Account for possible whitespace changes
         let trimmed_outdated_re = templ.outdated_license_trimmed_pattern(commenter);
+        // trace!("trimmed_outdated_re Regex: {:?}", trimmed_outdated_re);
         if trimmed_outdated_re.is_match(content) {
             Some(trimmed_outdated_re.replace(content, header).to_string())
         } else {

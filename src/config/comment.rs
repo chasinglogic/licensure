@@ -23,10 +23,7 @@ fn def_trailing_lines() -> usize {
 
 pub fn get_filetype(filename: &str) -> &str {
     let iter = filename.split('.');
-    match iter.last() {
-        Some(s) => s,
-        None => "",
-    }
+    iter.last().unwrap_or_default()
 }
 
 #[derive(Clone, Deserialize, Debug)]
