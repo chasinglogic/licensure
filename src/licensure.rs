@@ -121,6 +121,22 @@ impl Licensure {
         }
     }
 
+    fn check_if_needs_replacement(
+        &self,
+        replaces: &Vec<Regex>,
+        _commenter: &dyn Comment,
+        content: &str,
+        header: &str,
+    ) -> Option<String> {
+        for old in replaces {
+            if old.is_match(content) {
+                return Some(old.replace(content, header).to_string());
+            }
+            // TODO: Add a check here with comments stripped from content
+        }
+        None
+    }
+
     fn add_header(&self, mut header: String, content: &mut String) -> String {
         if let Some(value) = Self::strip_shebang_if_found(content) {
             println!("Shebang: {}", value);
@@ -153,6 +169,16 @@ impl Licensure {
             info!("{} licensed, but year is outdated", file);
             self.stats.files_needing_license_update.push(file.clone());
             return LicenseStatus::NeedsUpdate(update);
+        }
+
+        if let Some(replaces) = self.config.licenses.get_replaces(file) {
+            if let Some(update) =
+                self.check_if_needs_replacement(replaces, commenter.as_ref(), content, &header)
+            {
+                info!("{} licensed, but license is outdated", file);
+                self.stats.files_needing_license_update.push(file.clone());
+                return LicenseStatus::NeedsUpdate(update);
+            }
         }
 
         self.stats.files_needing_license_update.push(file.clone());
