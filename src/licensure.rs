@@ -26,6 +26,7 @@ pub struct Licensure {
     check_mode: bool,
 }
 
+#[derive(PartialEq, Eq, Debug)]
 enum LicenseStatus {
     NeedsUpdate(String),
     AlreadyLicensed,
@@ -125,7 +126,7 @@ impl Licensure {
         }
     }
 
-    fn check_if_needs_replacement(
+    fn get_replaces_replacement(
         &self,
         replaces: &Vec<Regex>,
         _commenter: &dyn Comment,
@@ -177,7 +178,7 @@ impl Licensure {
 
         if let Some(replaces) = self.config.licenses.get_replaces(file) {
             if let Some(update) =
-                self.check_if_needs_replacement(replaces, commenter.as_ref(), content, &header)
+                self.get_replaces_replacement(replaces, commenter.as_ref(), content, &header)
             {
                 info!("{} licensed, but license is outdated", file);
                 self.stats.files_needing_license_update.push(file.clone());
@@ -262,6 +263,25 @@ mod test {
         let content = "# License 2020\n#\n# text\n";
         let result = l.check_if_outdated(&templ, &commenter, content, &header);
         assert!(result.is_some());
+    }
+
+    #[test]
+    fn test_detects_replaces() {
+        let l = Licensure::new(Config::default());
+        let replaces = vec![
+            Regex::new("This first regex is not going to hit").expect("Can compile static regex"),
+            Regex::new("(// *)?foo \\(C\\) .* another thing\n?").expect("Can compile static regex"),
+        ];
+        let templ = Template::new("License [year]\n\ntext", test_context("2024"));
+        let commenter = LineComment::new("//", None);
+        let header = commenter.comment(&templ.render());
+        let content = "BEFORE// foo (C) fill fill fill another thing\nAFTER";
+        let result = l.get_replaces_replacement(&replaces, &commenter, content, &header);
+        eprintln!("{:?}", result);
+        assert!(result.is_some());
+        assert!(result
+            .unwrap()
+            .eq("BEFORE// License 2024\n//\n// text\nAFTER"));
     }
 
     #[test]
@@ -359,5 +379,54 @@ if __name__ == '__main__':
 
         let result = l.add_header(header, &mut content);
         assert_eq!(result, expected)
+    }
+
+    static CONFIG_WITH_REPLACES: &str = r##"
+excludes: []
+licenses:
+  - files: any
+    ident: TESTING
+    authors:
+      - name: The Tester
+    template: "New Test License [name of author]\nOnly For Testing"
+    replaces:
+      - "(# *)?Before replacement\n?"
+comments:
+  - columns: 80
+    extensions:
+      - py
+    commenter:
+      type: line
+      comment_char: "#""##;
+
+    #[test]
+    fn test_add_license_header_with_replaces() {
+        let config: Config =
+            serde_yaml::from_str(CONFIG_WITH_REPLACES).expect("Static config to be parsable");
+        let mut l = Licensure::new(config);
+        let mut content = r#"
+# Before replacement
+def main():
+    print('hello world')
+
+if __name__ == '__main__':
+    main()
+"#
+        .to_string();
+        let result = l.add_license_header(&"test_file.py".to_string(), &mut content);
+        assert_eq!(
+            result,
+            LicenseStatus::NeedsUpdate(
+                r#"
+# New Test License The Tester Only For Testing
+def main():
+    print('hello world')
+
+if __name__ == '__main__':
+    main()
+"#
+                .to_string()
+            )
+        )
     }
 }

@@ -285,7 +285,8 @@ template: |
 # A list of regular expressions which, if found, will be replaced with
 # this license. Note: commenting format is NOT taken into account with
 # these, so your given regex(s) must specify the possible formatting
-# of comments (see examples below).
+# of comments (notice the "//" and "#" comment specifiers in the
+# examples below).
 replaces:
   - "// *\\(c\\) You before changing licenses"
   - "# *\\(c\\) You before changing licenses
@@ -370,7 +371,28 @@ extensions:
 
 An optional list of regular expressions which, if specified, restrict what files
 this commenter applies to. This commenter will only apply to files which match
-one of the given regular expressions.
+one of the given regular expressions. These regular expressions are tested
+against the whole file path including the file extension.
+
+Note that this works in conjunction with the `extensions` setting. The `files`
+option only serves to RESTRICT the possible files this commenter applies to
+after the file extension has matched an entry in the list of supported
+extensions.
+
+Example restricting this commenter to only python files under the `example`
+directory:
+
+```yaml
+comments:
+  - columns: 80
+    extensions:
+      - py
+    files:
+      - example/.*
+    commenter:
+      type: line
+      comment_char: #
+```
 
 ##### Commenter Configuration
 

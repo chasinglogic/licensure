@@ -142,4 +142,39 @@ pub mod tests {
     fn test_get_filetype() {
         assert_eq!("py", get_filetype("test.py"))
     }
+
+    static COMMENT_CONFIG_PY: &str = r##"columns: 80
+extensions:
+    - py
+commenter:
+    type: line
+    comment_char: "#""##;
+
+    static COMMENT_CONFIG_PY_EXAMPLE: &str = r##"columns: 80
+extensions:
+    - py
+files:
+    - example/.*
+commenter:
+    type: line
+    comment_char: "#""##;
+    #[test]
+    fn test_matches() {
+        let config_py: Config =
+            serde_yaml::from_str(COMMENT_CONFIG_PY).expect("Parsing static config");
+        let config_py_example: Config =
+            serde_yaml::from_str(COMMENT_CONFIG_PY_EXAMPLE).expect("Parsing static config");
+
+        let file = "example/foo.py";
+        assert!(config_py.matches(get_filetype(file), file));
+        assert!(config_py_example.matches(get_filetype(file), file));
+
+        let file = "example/foo.c";
+        assert!(!config_py.matches(get_filetype(file), file));
+        assert!(!config_py_example.matches(get_filetype(file), file));
+
+        let file = "another_dir/foo.py";
+        assert!(config_py.matches(get_filetype(file), file));
+        assert!(!config_py_example.matches(get_filetype(file), file));
+    }
 }

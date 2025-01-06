@@ -53,11 +53,8 @@ fn get_project_files() -> Vec<String> {
     let mut new_unstaged_files = git_ls_files(vec!["--others", "--exclude-standard"]);
     files.append(&mut new_unstaged_files);
 
+    files.retain(|x| !Path::new(x).is_symlink());
     files
-        .iter()
-        .filter(|x| !Path::new(*x).is_symlink())
-        .map(|x| x.to_string())
-        .collect()
 }
 
 fn git_ls_files(extra_args: Vec<&str>) -> Vec<String> {
@@ -136,9 +133,9 @@ More information is available at: {}",
     match matches.occurrences_of("verbose") {
         0 => (),
         x => simplelog::SimpleLogger::init(
-            if x > 3 {
+            if x >= 3 {
                 simplelog::LevelFilter::Trace
-            } else if x > 2 {
+            } else if x >= 2 {
                 simplelog::LevelFilter::Debug
             } else {
                 simplelog::LevelFilter::Info
