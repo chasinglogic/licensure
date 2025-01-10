@@ -53,6 +53,12 @@ fn get_project_files() -> Vec<String> {
     let mut new_unstaged_files = git_ls_files(vec!["--others", "--exclude-standard"]);
     files.append(&mut new_unstaged_files);
 
+    // If there is a file symlink to outside the project directory we probably
+    // don't want to modify it (it'd be surprising to have external
+    // modifications), and if it's to within the project then we'll modify it
+    // when we come across the "real" file. Furthermore, allowing symlinks adds
+    // the possibility that we'll have ambiguity (or a it's-never-happy fight)
+    // if the symlink has a different file extension than the file it points at.
     files.retain(|x| !Path::new(x).is_symlink());
     files
 }

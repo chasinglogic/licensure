@@ -101,7 +101,7 @@ impl Licensure {
         }
     }
 
-    fn check_if_outdated(
+    fn get_outdated_replacement(
         &self,
         templ: &Template,
         commenter: &dyn Comment,
@@ -109,16 +109,16 @@ impl Licensure {
         header: &str,
     ) -> Option<String> {
         let outdated_re = templ.outdated_license_pattern(commenter);
-        // trace!("Content: {}", content);
-        // trace!("Outdated Regex: {:?}", outdated_re);
-        // trace!("Header: {:?}", header);
+        trace!("Content: {}", content);
+        trace!("Outdated Regex: {:?}", outdated_re);
+        trace!("Header: {:?}", header);
         if outdated_re.is_match(content) {
             return Some(outdated_re.replace(content, header).to_string());
         }
 
         // Account for possible whitespace changes
         let trimmed_outdated_re = templ.outdated_license_trimmed_pattern(commenter);
-        // trace!("trimmed_outdated_re Regex: {:?}", trimmed_outdated_re);
+        trace!("trimmed_outdated_re Regex: {:?}", trimmed_outdated_re);
         if trimmed_outdated_re.is_match(content) {
             Some(trimmed_outdated_re.replace(content, header).to_string())
         } else {
@@ -129,7 +129,6 @@ impl Licensure {
     fn get_replaces_replacement(
         &self,
         replaces: &Vec<Regex>,
-        _commenter: &dyn Comment,
         content: &str,
         header: &str,
     ) -> Option<String> {
@@ -170,16 +169,16 @@ impl Licensure {
             return LicenseStatus::AlreadyLicensed;
         }
 
-        if let Some(update) = self.check_if_outdated(&templ, commenter.as_ref(), content, &header) {
+        if let Some(update) =
+            self.get_outdated_replacement(&templ, commenter.as_ref(), content, &header)
+        {
             info!("{} licensed, but year is outdated", file);
             self.stats.files_needing_license_update.push(file.clone());
             return LicenseStatus::NeedsUpdate(update);
         }
 
         if let Some(replaces) = self.config.licenses.get_replaces(file) {
-            if let Some(update) =
-                self.get_replaces_replacement(replaces, commenter.as_ref(), content, &header)
-            {
+            if let Some(update) = self.get_replaces_replacement(replaces, content, &header) {
                 info!("{} licensed, but license is outdated", file);
                 self.stats.files_needing_license_update.push(file.clone());
                 return LicenseStatus::NeedsUpdate(update);
@@ -222,7 +221,7 @@ mod test {
         let commenter = LineComment::new("#", None);
         let header = commenter.comment(&templ.render());
         let content = "# License 2020\n#\n# text";
-        let result = l.check_if_outdated(&templ, &commenter, content, &header);
+        let result = l.get_outdated_replacement(&templ, &commenter, content, &header);
         assert!(result.is_some());
     }
 
@@ -236,7 +235,7 @@ mod test {
         let commenter = LineComment::new("#", None);
         let header = commenter.comment(&templ.render());
         let content = "# License 2020, 2023\n#\n# text";
-        let result = l.check_if_outdated(&templ, &commenter, content, &header);
+        let result = l.get_outdated_replacement(&templ, &commenter, content, &header);
         assert!(result.is_some());
     }
 
@@ -250,7 +249,7 @@ mod test {
         let commenter = LineComment::new("#", None);
         let header = commenter.comment(&templ.render());
         let content = "# License 2020\n#\n# text";
-        let result = l.check_if_outdated(&templ, &commenter, content, &header);
+        let result = l.get_outdated_replacement(&templ, &commenter, content, &header);
         assert!(result.is_some());
     }
 
@@ -261,7 +260,7 @@ mod test {
         let commenter = LineComment::new("#", None);
         let header = commenter.comment(&templ.render());
         let content = "# License 2020\n#\n# text\n";
-        let result = l.check_if_outdated(&templ, &commenter, content, &header);
+        let result = l.get_outdated_replacement(&templ, &commenter, content, &header);
         assert!(result.is_some());
     }
 
@@ -276,7 +275,7 @@ mod test {
         let commenter = LineComment::new("//", None);
         let header = commenter.comment(&templ.render());
         let content = "BEFORE// foo (C) fill fill fill another thing\nAFTER";
-        let result = l.get_replaces_replacement(&replaces, &commenter, content, &header);
+        let result = l.get_replaces_replacement(&replaces, content, &header);
         eprintln!("{:?}", result);
         assert!(result.is_some());
         assert!(result
