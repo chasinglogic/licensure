@@ -370,9 +370,10 @@ extensions:
 ##### Files Configuration
 
 An optional list of regular expressions which, if specified, restrict what files
-this commenter applies to. This commenter will only apply to files which match
-one of the given regular expressions. These regular expressions are tested
-against the whole file path including the file extension.
+this commenter applies to after file extension has been taken into account..
+This commenter will only apply to files which match one of the given regular
+expressions AND has one of the listed file extensions. These regular expressions
+are tested against the whole file path including the file extension.
 
 Note that this works in conjunction with the `extensions` setting. The `files`
 option only serves to RESTRICT the possible files this commenter applies to
