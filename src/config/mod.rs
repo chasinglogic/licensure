@@ -17,6 +17,7 @@ use std::io;
 use std::path::PathBuf;
 use std::process;
 
+use regex::Regex;
 use regex::RegexSet;
 use serde::Deserialize;
 
@@ -58,7 +59,7 @@ impl Default for Config {
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Default, Clone)]
 #[serde(from = "Vec<String>")]
 pub struct RegexList {
     regex: RegexSet,
@@ -114,7 +115,7 @@ impl CommentConfigList {
         let file_type = get_filetype(filename);
 
         for c in &self.cfgs {
-            if c.matches(file_type) {
+            if c.matches(file_type, filename) {
                 return c.commenter();
             }
         }
@@ -134,6 +135,16 @@ impl LicenseConfigList {
         for cfg in &self.cfgs {
             if cfg.file_is_match(filename) {
                 return Some(cfg.get_template(filename));
+            }
+        }
+
+        None
+    }
+
+    pub fn get_replaces(&self, filename: &str) -> Option<&Vec<Regex>> {
+        for cfg in &self.cfgs {
+            if cfg.file_is_match(filename) {
+                return cfg.get_replaces().as_ref();
             }
         }
 

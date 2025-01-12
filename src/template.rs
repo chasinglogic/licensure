@@ -329,7 +329,7 @@ mod tests {
         );
         let commenter: Box<dyn Comment> = Box::new(LineComment::new("#", Option::Some(1000)));
         let re = template.outdated_license_pattern(commenter.as_ref());
-        assert_eq!(true, re.is_match("# Copyright (C) 2020 Mathew Robinson <chasinglogic@gmail.com> This program is free software.\n"))
+        assert!(re.is_match("# Copyright (C) 2020 Mathew Robinson <chasinglogic@gmail.com> This program is free software.\n"))
     }
 
     #[test]
@@ -351,11 +351,11 @@ mod tests {
         let commenter: Box<dyn Comment> =
             Box::new(LineComment::new("#", Option::Some(1000)).set_trailing_lines(2));
         let re = template.outdated_license_pattern(commenter.as_ref());
-        assert_eq!(true, re.is_match("# Copyright (C) 2020 Mathew Robinson <chasinglogic@gmail.com> This program is free software.\n\n\n"));
-        assert_eq!(false, re.is_match("# Copyright (C) 2020 Mathew Robinson <chasinglogic@gmail.com> This program is free software."));
+        assert!(re.is_match("# Copyright (C) 2020 Mathew Robinson <chasinglogic@gmail.com> This program is free software.\n\n\n"));
+        assert!(!re.is_match("# Copyright (C) 2020 Mathew Robinson <chasinglogic@gmail.com> This program is free software."));
 
         let trimmed = template.outdated_license_trimmed_pattern(commenter.as_ref());
-        assert_eq!(true, trimmed.is_match("# Copyright (C) 2020 Mathew Robinson <chasinglogic@gmail.com> This program is free software."))
+        assert!(trimmed.is_match("# Copyright (C) 2020 Mathew Robinson <chasinglogic@gmail.com> This program is free software."))
     }
 
     #[test]

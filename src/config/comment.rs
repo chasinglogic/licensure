@@ -17,16 +17,15 @@ use crate::comments::BlockComment;
 use crate::comments::Comment;
 use crate::comments::LineComment;
 
+use super::RegexList;
+
 fn def_trailing_lines() -> usize {
     0
 }
 
 pub fn get_filetype(filename: &str) -> &str {
     let iter = filename.split('.');
-    match iter.last() {
-        Some(s) => s,
-        None => "",
-    }
+    iter.last().unwrap_or_default()
 }
 
 #[derive(Clone, Deserialize, Debug)]
@@ -68,6 +67,8 @@ impl FileType {
 pub struct Config {
     #[serde(alias = "extensions")]
     extension: FileType,
+    #[serde(default)]
+    files: Option<RegexList>,
     columns: Option<usize>,
     commenter: Commenter,
 }
@@ -76,6 +77,7 @@ impl Config {
     pub fn default() -> Config {
         Config {
             extension: FileType::Single("any".to_string()),
+            files: None,
             columns: None,
             commenter: Commenter::Line {
                 comment_char: "#".to_string(),
@@ -84,8 +86,16 @@ impl Config {
         }
     }
 
-    pub fn matches(&self, file_type: &str) -> bool {
-        self.extension.matches(file_type)
+    pub fn matches(&self, file_type: &str, filename: &str) -> bool {
+        if self.extension.matches(file_type) {
+            if let Some(files) = &self.files {
+                files.is_match(filename)
+            } else {
+                true
+            }
+        } else {
+            false
+        }
     }
 
     pub fn commenter(&self) -> Box<dyn Comment> {
@@ -131,5 +141,40 @@ pub mod tests {
     #[test]
     fn test_get_filetype() {
         assert_eq!("py", get_filetype("test.py"))
+    }
+
+    static COMMENT_CONFIG_PY: &str = r##"columns: 80
+extensions:
+    - py
+commenter:
+    type: line
+    comment_char: "#""##;
+
+    static COMMENT_CONFIG_PY_EXAMPLE: &str = r##"columns: 80
+extensions:
+    - py
+files:
+    - example/.*
+commenter:
+    type: line
+    comment_char: "#""##;
+    #[test]
+    fn test_matches() {
+        let config_py: Config =
+            serde_yaml::from_str(COMMENT_CONFIG_PY).expect("Parsing static config");
+        let config_py_example: Config =
+            serde_yaml::from_str(COMMENT_CONFIG_PY_EXAMPLE).expect("Parsing static config");
+
+        let file = "example/foo.py";
+        assert!(config_py.matches(get_filetype(file), file));
+        assert!(config_py_example.matches(get_filetype(file), file));
+
+        let file = "example/foo.c";
+        assert!(!config_py.matches(get_filetype(file), file));
+        assert!(!config_py_example.matches(get_filetype(file), file));
+
+        let file = "another_dir/foo.py";
+        assert!(config_py.matches(get_filetype(file), file));
+        assert!(!config_py_example.matches(get_filetype(file), file));
     }
 }

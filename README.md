@@ -68,7 +68,7 @@ If you need to update licensure via cargo you can then run the appropriate
 
 Licensure searches for a config file `.licensure.yml` which will
 inform it's operation. Licensure will not function without a config
-file and if it cannot find one it will report this to you. 
+file and if it cannot find one it will report this to you.
 
 The method for finding a config file [can be found in the
 Configuration section of this
@@ -91,7 +91,7 @@ licenses:
       - name: Mathew Robinson
         email: chasinglogic@gmail.com
     auto_template: true
-    
+
 comments:
   - columns: 80
     extension: any
@@ -184,7 +184,7 @@ and `change_in_place`. The other top level keys in the config file are
 referred to as [Configuration Sections](#configuration-sections) and
 make up the bulk of Licensure configuration.
 
-#### change\_in\_place. 
+#### change_in_place.
 
 Takes a boolean indicating whether to change files in place when
 licensure is run. If this is set to `false` then when this config file
@@ -200,7 +200,7 @@ change_in_place: true
 #### exclude
 
 Takes a list of strings that will be compiled as regexes to filter out
-files from licensing.  Excludes passed via the command line flag will
+files from licensing. Excludes passed via the command line flag will
 be joined with any found in a config file.
 
 **Example Configuration:**
@@ -281,6 +281,15 @@ template: |
 #
 # Important Note: this means the ident must be a valid SPDX identifier
 # auto_template: true
+
+# A list of regular expressions which, if found, will be replaced with
+# this license. Note: commenting format is NOT taken into account with
+# these, so your given regex(s) must specify the possible formatting
+# of comments (notice the "//" and "#" comment specifiers in the
+# examples below).
+replaces:
+  - "// *\\(c\\) You before changing licenses"
+  - "# *\\(c\\) You before changing licenses
 ```
 
 A common licenses section would look like:
@@ -309,7 +318,7 @@ Copyright 2019, 2024 ...
 ```
 
 The `end_year` can also be specified but if omitted will automatically be
-updated to be the current year per your local system time. 
+updated to be the current year per your local system time.
 
 ###### Automated year ranges
 
@@ -340,7 +349,7 @@ columns: 80
 ##### Extension Configuration
 
 The extensions (or singular extension) field defines which file
-extensions to apply the commenter to. If extension is the string 
+extensions to apply the commenter to. If extension is the string
 "any" then all extensions will match this comment configuration.
 
 Example use of any:
@@ -356,6 +365,33 @@ extensions:
   - js
   - rs
   - go
+```
+
+##### Files Configuration
+
+An optional list of regular expressions which, if specified, restrict what files
+this commenter applies to. This commenter will only apply to files which match
+one of the given regular expressions. These regular expressions are tested
+against the whole file path including the file extension.
+
+Note that this works in conjunction with the `extensions` setting. The `files`
+option only serves to RESTRICT the possible files this commenter applies to
+after the file extension has matched an entry in the list of supported
+extensions.
+
+Example restricting this commenter to only python files under the `example`
+directory:
+
+```yaml
+comments:
+  - columns: 80
+    extensions:
+      - py
+    files:
+      - example/.*
+    commenter:
+      type: line
+      comment_char: #
 ```
 
 ##### Commenter Configuration
@@ -377,7 +413,7 @@ If trailing_lines is omitted it's assumed to be 0.
 
 ###### Line Commenter Example
 
-This is an example of a line commenter configuration. 
+This is an example of a line commenter configuration.
 
 ```yaml
 commenter:
@@ -396,7 +432,7 @@ spans multiple lines
 It would generate:
 
 ```
-// A piece of text that 
+// A piece of text that
 // spans multiple lines
 ```
 
@@ -405,7 +441,7 @@ column width.
 
 ###### Block Commenter Example
 
-This is an example of a block commenter configuration. 
+This is an example of a block commenter configuration.
 
 ```yaml
 commenter:
@@ -427,7 +463,7 @@ It would generate:
 
 ```
 /*
-* A piece of text that 
+* A piece of text that
 * spans multiple lines
 */
 ```
@@ -435,7 +471,7 @@ It would generate:
 Note: when columns has a value the text may be re-wrapped to match the
 column width.
 
-### A Complete Configuration Example 
+### A Complete Configuration Example
 
 The best up to date minimal example configuration is the one for
 [licensure itself](https://github.com/chasinglogic/licensure/blob/master/.licensure.yml).

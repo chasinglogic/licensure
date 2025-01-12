@@ -26,6 +26,7 @@ pub struct Licensure {
     check_mode: bool,
 }
 
+#[derive(PartialEq, Eq, Debug)]
 enum LicenseStatus {
     NeedsUpdate(String),
     AlreadyLicensed,
@@ -54,6 +55,8 @@ impl Licensure {
                 info!("skipping {} because it is excluded.", file);
                 continue;
             }
+
+            trace!("Working on file: {}", &file);
 
             let mut content = String::new();
             {
@@ -98,7 +101,7 @@ impl Licensure {
         }
     }
 
-    fn check_if_outdated(
+    fn get_outdated_replacement(
         &self,
         templ: &Template,
         commenter: &dyn Comment,
@@ -106,19 +109,36 @@ impl Licensure {
         header: &str,
     ) -> Option<String> {
         let outdated_re = templ.outdated_license_pattern(commenter);
-        println!("{}", content);
-        println!("{:?}", outdated_re);
+        trace!("Content: {}", content);
+        trace!("Outdated Regex: {:?}", outdated_re);
+        trace!("Header: {:?}", header);
         if outdated_re.is_match(content) {
             return Some(outdated_re.replace(content, header).to_string());
         }
 
         // Account for possible whitespace changes
         let trimmed_outdated_re = templ.outdated_license_trimmed_pattern(commenter);
+        trace!("trimmed_outdated_re Regex: {:?}", trimmed_outdated_re);
         if trimmed_outdated_re.is_match(content) {
             Some(trimmed_outdated_re.replace(content, header).to_string())
         } else {
             None
         }
+    }
+
+    fn get_replaces_replacement(
+        &self,
+        replaces: &Vec<Regex>,
+        content: &str,
+        header: &str,
+    ) -> Option<String> {
+        for old in replaces {
+            if old.is_match(content) {
+                return Some(old.replace(content, header).to_string());
+            }
+            // TODO: Add a check here with comments stripped from content
+        }
+        None
     }
 
     fn add_header(&self, mut header: String, content: &mut String) -> String {
@@ -149,10 +169,20 @@ impl Licensure {
             return LicenseStatus::AlreadyLicensed;
         }
 
-        if let Some(update) = self.check_if_outdated(&templ, commenter.as_ref(), content, &header) {
+        if let Some(update) =
+            self.get_outdated_replacement(&templ, commenter.as_ref(), content, &header)
+        {
             info!("{} licensed, but year is outdated", file);
             self.stats.files_needing_license_update.push(file.clone());
             return LicenseStatus::NeedsUpdate(update);
+        }
+
+        if let Some(replaces) = self.config.licenses.get_replaces(file) {
+            if let Some(update) = self.get_replaces_replacement(replaces, content, &header) {
+                info!("{} licensed, but license is outdated", file);
+                self.stats.files_needing_license_update.push(file.clone());
+                return LicenseStatus::NeedsUpdate(update);
+            }
         }
 
         self.stats.files_needing_license_update.push(file.clone());
@@ -191,7 +221,7 @@ mod test {
         let commenter = LineComment::new("#", None);
         let header = commenter.comment(&templ.render());
         let content = "# License 2020\n#\n# text";
-        let result = l.check_if_outdated(&templ, &commenter, content, &header);
+        let result = l.get_outdated_replacement(&templ, &commenter, content, &header);
         assert!(result.is_some());
     }
 
@@ -205,7 +235,7 @@ mod test {
         let commenter = LineComment::new("#", None);
         let header = commenter.comment(&templ.render());
         let content = "# License 2020, 2023\n#\n# text";
-        let result = l.check_if_outdated(&templ, &commenter, content, &header);
+        let result = l.get_outdated_replacement(&templ, &commenter, content, &header);
         assert!(result.is_some());
     }
 
@@ -219,7 +249,7 @@ mod test {
         let commenter = LineComment::new("#", None);
         let header = commenter.comment(&templ.render());
         let content = "# License 2020\n#\n# text";
-        let result = l.check_if_outdated(&templ, &commenter, content, &header);
+        let result = l.get_outdated_replacement(&templ, &commenter, content, &header);
         assert!(result.is_some());
     }
 
@@ -230,8 +260,27 @@ mod test {
         let commenter = LineComment::new("#", None);
         let header = commenter.comment(&templ.render());
         let content = "# License 2020\n#\n# text\n";
-        let result = l.check_if_outdated(&templ, &commenter, content, &header);
+        let result = l.get_outdated_replacement(&templ, &commenter, content, &header);
         assert!(result.is_some());
+    }
+
+    #[test]
+    fn test_detects_replaces() {
+        let l = Licensure::new(Config::default());
+        let replaces = vec![
+            Regex::new("This first regex is not going to hit").expect("Can compile static regex"),
+            Regex::new("(// *)?foo \\(C\\) .* another thing\n?").expect("Can compile static regex"),
+        ];
+        let templ = Template::new("License [year]\n\ntext", test_context("2024"));
+        let commenter = LineComment::new("//", None);
+        let header = commenter.comment(&templ.render());
+        let content = "BEFORE// foo (C) fill fill fill another thing\nAFTER";
+        let result = l.get_replaces_replacement(&replaces, content, &header);
+        eprintln!("{:?}", result);
+        assert!(result.is_some());
+        assert!(result
+            .unwrap()
+            .eq("BEFORE// License 2024\n//\n// text\nAFTER"));
     }
 
     #[test]
@@ -329,5 +378,54 @@ if __name__ == '__main__':
 
         let result = l.add_header(header, &mut content);
         assert_eq!(result, expected)
+    }
+
+    static CONFIG_WITH_REPLACES: &str = r##"
+excludes: []
+licenses:
+  - files: any
+    ident: TESTING
+    authors:
+      - name: The Tester
+    template: "New Test License [name of author]\nOnly For Testing"
+    replaces:
+      - "(# *)?Before replacement\n?"
+comments:
+  - columns: 80
+    extensions:
+      - py
+    commenter:
+      type: line
+      comment_char: "#""##;
+
+    #[test]
+    fn test_add_license_header_with_replaces() {
+        let config: Config =
+            serde_yaml::from_str(CONFIG_WITH_REPLACES).expect("Static config to be parsable");
+        let mut l = Licensure::new(config);
+        let mut content = r#"
+# Before replacement
+def main():
+    print('hello world')
+
+if __name__ == '__main__':
+    main()
+"#
+        .to_string();
+        let result = l.add_license_header(&"test_file.py".to_string(), &mut content);
+        assert_eq!(
+            result,
+            LicenseStatus::NeedsUpdate(
+                r#"
+# New Test License The Tester Only For Testing
+def main():
+    print('hello world')
+
+if __name__ == '__main__':
+    main()
+"#
+                .to_string()
+            )
+        )
     }
 }
