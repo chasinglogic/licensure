@@ -194,7 +194,7 @@ fn find_config_file() -> Option<PathBuf> {
     }
 
     if let Some(mut global) = xdg_config_dir() {
-        global.push(".licensure");
+        global.push("licensure");
         global.push("config.yml");
         if global.exists() {
             return Some(global);
