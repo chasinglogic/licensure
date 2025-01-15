@@ -233,11 +233,10 @@ copyright holders of those files. A license configuration object has
 the following form:
 
 ```yaml
-# Either a regex or the string "any" to determine to what files this
-# license should apply. It is common for projects to have files
-# under multiple licenses or with multiple copyright holders. This
-# provides the ability to automatically license files correctly
-# based on their file paths.
+# Either a regex, a list of regexes, or the string "any" to determine to what
+# files this license should apply. It is common for projects to have files under
+# multiple licenses or with multiple copyright holders. This provides the
+# ability to automatically license files correctly based on their file paths.
 #
 # If "any" is provided all files will match this license.
 files: any

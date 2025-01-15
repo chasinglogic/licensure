@@ -13,53 +13,43 @@
 //
 use std::process::{self, Command};
 
+use super::RegexList;
 use chrono::Local;
 use regex::Regex;
-use serde::Deserialize;
+use serde::{Deserialize, Deserializer};
 
 use crate::template::{Authors, Context, Template};
 
 #[derive(Deserialize, Debug)]
-#[serde(from = "String")]
-struct FileMatcher {
-    any: bool,
-    regex: Option<Regex>,
+#[serde(untagged)]
+enum FileMatcher {
+    #[serde(deserialize_with = "deserialize_file_matcher_any")]
+    Any,
+    #[serde(with = "serde_regex")]
+    Single(Regex),
+    RegexList(RegexList),
 }
 
 impl FileMatcher {
     pub fn is_match(&self, s: &str) -> bool {
-        if self.any {
-            return true;
-        }
-
-        match &self.regex {
-            Some(r) => r.is_match(s),
-            None => false,
+        match self {
+            FileMatcher::Any => true,
+            FileMatcher::Single(r) => r.is_match(s),
+            FileMatcher::RegexList(ref regex_list) => regex_list.is_match(s),
         }
     }
 }
 
-impl From<String> for FileMatcher {
-    fn from(s: String) -> FileMatcher {
-        if s == "any" {
-            return FileMatcher {
-                any: true,
-                regex: None,
-            };
-        }
-
-        let r = match Regex::new(&s) {
-            Ok(r) => r,
-            Err(e) => {
-                println!("Failed to compile file matcher regex: {}", e);
-                process::exit(1);
-            }
-        };
-
-        FileMatcher {
-            any: false,
-            regex: Some(r),
-        }
+/// Tries to deserialize an "any" string and errors on any other input
+fn deserialize_file_matcher_any<'de, D>(deserializer: D) -> Result<(), D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let buf = String::deserialize(deserializer)?;
+    if buf == "any" {
+        Ok(())
+    } else {
+        Err(serde::de::Error::custom("Not an 'any'"))
     }
 }
 
@@ -238,5 +228,77 @@ fn get_git_dates_for_file(filename: &str) -> Vec<String> {
             println!("{}", e);
             process::exit(1)
         }
+    }
+}
+
+#[cfg(test)]
+pub mod tests {
+    use super::*;
+
+    static ANY_TEST: &str = r#"
+files: any
+ident: foo
+authors:
+    - name: Author1
+      email: a@example.com
+template: "some license"
+"#;
+    #[test]
+    fn test_deserialize_file_matcher_any() {
+        let test: Config =
+            serde_yaml::from_str(ANY_TEST).expect("To be able to parse static config");
+        if let FileMatcher::Any = test.files {
+            // This is good...
+        } else {
+            panic!(
+                "Expected to have any type for files but had: {:?}",
+                test.files
+            );
+        };
+    }
+
+    static REGEX_TEST: &str = r#"
+files: .*foo
+ident: foo
+authors:
+    - name: Author1
+      email: a@example.com
+template: "some license"
+"#;
+    #[test]
+    fn test_deserialize_file_matcher_regex() {
+        let test: Config =
+            serde_yaml::from_str(REGEX_TEST).expect("To be able to parse static config");
+        if let FileMatcher::Single(r) = test.files {
+            assert_eq!(".*foo", r.as_str());
+            return;
+        }
+        panic!(
+            "Expected to have a single regex for files but had: {:?}",
+            test.files
+        );
+    }
+    static REGEX_LIST_TEST: &str = r#"
+files: 
+    - a.*
+    - b.*
+ident: foo
+authors:
+    - name: Author1
+      email: a@example.com
+template: "some license"
+"#;
+    #[test]
+    fn test_deserialize_file_matcher_regex_list() {
+        let test: Config =
+            serde_yaml::from_str(REGEX_LIST_TEST).expect("To be able to parse static config");
+        if let FileMatcher::RegexList(r) = test.files {
+            assert_eq!(&["a.*", "b.*"], r.regex.patterns());
+            return;
+        }
+        panic!(
+            "Expected to have a RegexList for files but had: {:?}",
+            test.files
+        );
     }
 }
