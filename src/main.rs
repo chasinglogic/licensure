@@ -218,17 +218,17 @@ More information is available at: {}",
             {
                 print_files(
                     &stats.files_needing_license_update,
-                    "files' licenses need to be updated",
+                    "The following files' licenses need to be updated",
                 );
 
                 print_files(
                     &stats.files_not_licensed,
-                    "files were not licensed with the given config.",
+                    "The following files were not licensed with the given config.",
                 );
 
                 print_files(
                     &stats.files_needing_commenter,
-                    "files did not have a commenter with the given config.",
+                    "The following files did not have a commenter with the given config.",
                 );
 
                 process::exit(1);
@@ -236,7 +236,7 @@ More information is available at: {}",
 
             if print_files(
                 &stats.files_needing_commenter,
-                "files did not have a commenter with the given config.",
+                "The following files did not have a commenter with the given config.",
             ) {
                 process::exit(1);
             };
@@ -249,7 +249,7 @@ More information is available at: {}",
 /// parameter. Returns true if files were printed and false otherwise.
 fn print_files(files: &Vec<String>, message: &str) -> bool {
     if !files.is_empty() {
-        eprintln!("The following {} {} ", message, files.len());
+        eprintln!("{} {} ", message, files.len());
         for file in files {
             eprintln!("{}", file);
         }
