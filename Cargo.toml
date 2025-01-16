@@ -1,7 +1,7 @@
 [package]
 authors = ["Mathew Robinson <chasinglogic@gmail.com>"]
 name = "licensure"
-version = "0.6.0"
+version = "0.7.0"
 keywords = ["licensing", "cli", "tool", "license"]
 license = "GPL-3.0"
 readme = "README.md"
