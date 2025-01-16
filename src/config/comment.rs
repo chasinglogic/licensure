@@ -89,18 +89,6 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn default() -> Config {
-        Config {
-            extension: FileType::Single("any".to_string()),
-            files: None,
-            columns: None,
-            commenter: Commenter::Line {
-                comment_char: "#".to_string(),
-                trailing_lines: 0,
-            },
-        }
-    }
-
     pub fn matches(&self, file_type: &str, filename: &str) -> bool {
         if self.extension.matches(file_type) {
             if let Some(files) = &self.files {

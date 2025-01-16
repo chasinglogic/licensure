@@ -31,6 +31,7 @@ enum LicenseStatus {
     NeedsUpdate(String),
     AlreadyLicensed,
     NoConfigMatched,
+    NoCommenterMatched,
 }
 
 impl Licensure {
@@ -67,6 +68,10 @@ impl Licensure {
             match self.add_license_header(file, &mut content) {
                 LicenseStatus::NeedsUpdate(update) => self.handle_update(file, &update)?,
                 LicenseStatus::NoConfigMatched => self.stats.files_not_licensed.push(file.clone()),
+                LicenseStatus::NoCommenterMatched => {
+                    self.stats.files_not_licensed.push(file.clone());
+                    self.stats.files_needing_commenter.push(file.clone())
+                }
                 LicenseStatus::AlreadyLicensed => continue,
             }
         }
@@ -160,7 +165,12 @@ impl Licensure {
             }
         };
 
-        let commenter = self.config.comments.get_commenter(file);
+        let commenter = match self.config.comments.get_commenter(file) {
+            Some(c) => c,
+            None => {
+                return LicenseStatus::NoCommenterMatched;
+            }
+        };
 
         let uncommented = templ.render();
         let header = commenter.comment(&uncommented);
@@ -193,6 +203,7 @@ impl Licensure {
 pub struct LicenseStats {
     pub files_not_licensed: Vec<String>,
     pub files_needing_license_update: Vec<String>,
+    pub files_needing_commenter: Vec<String>,
 }
 
 impl LicenseStats {
@@ -200,6 +211,7 @@ impl LicenseStats {
         Self {
             files_not_licensed: Vec::new(),
             files_needing_license_update: Vec::new(),
+            files_needing_commenter: Vec::new(),
         }
     }
 }
@@ -427,5 +439,30 @@ if __name__ == '__main__':
                 .to_string()
             )
         )
+    }
+
+    static CONFIG_DEFAULT_COMMENTER_FALSE: &str = r##"
+excludes: []
+licenses:
+  - files: any
+    ident: TESTING
+    authors:
+      - name: The Tester
+    template: "New Test License [name of author]\nOnly For Testing"
+comments: []
+"##;
+
+    #[test]
+    fn test_add_license_header_default_commenter_false() {
+        let config: Config = serde_yaml::from_str(CONFIG_DEFAULT_COMMENTER_FALSE)
+            .expect("Static config to be parsable");
+        let mut l = Licensure::new(config);
+        let mut content = r#"
+// Before replacement
+# include somefile.h
+"#
+        .to_string();
+        let result = l.add_license_header(&"test_file.c".to_string(), &mut content);
+        assert_eq!(result, LicenseStatus::NoCommenterMatched);
     }
 }

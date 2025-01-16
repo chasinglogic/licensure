@@ -216,29 +216,46 @@ More information is available at: {}",
                 && !(stats.files_not_licensed.is_empty()
                     && stats.files_needing_license_update.is_empty())
             {
-                if !stats.files_needing_license_update.is_empty() {
-                    eprintln!(
-                        "The following {} files' licenses need to be updated",
-                        stats.files_needing_license_update.len()
-                    );
-                    for file in stats.files_needing_license_update {
-                        eprintln!("{}", file);
-                    }
-                }
+                print_files(
+                    &stats.files_needing_license_update,
+                    "files' licenses need to be updated",
+                );
 
-                if !stats.files_not_licensed.is_empty() {
-                    eprintln!(
-                        "The following {} files were not licensed with the given config.",
-                        stats.files_not_licensed.len()
-                    );
-                    for file in stats.files_not_licensed {
-                        eprintln!("{}", file);
-                    }
-                }
+                print_files(
+                    &stats.files_not_licensed,
+                    "files were not licensed with the given config.",
+                );
+
+                print_files(
+                    &stats.files_needing_commenter,
+                    "files did not have a commenter with the given config.",
+                );
 
                 process::exit(1);
             }
+
+            if print_files(
+                &stats.files_needing_commenter,
+                "files did not have a commenter with the given config.",
+            ) {
+                process::exit(1);
+            };
         }
+    }
+}
+
+/// Print the given list of files (if non-empty) with a message "The following X
+/// Y" where X is the number of files to be printed and Y is the given message
+/// parameter. Returns true if files were printed and false otherwise.
+fn print_files(files: &Vec<String>, message: &str) -> bool {
+    if !files.is_empty() {
+        eprintln!("The following {} {} ", message, files.len());
+        for file in files {
+            eprintln!("{}", file);
+        }
+        true
+    } else {
+        false
     }
 }
 

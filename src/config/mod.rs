@@ -111,16 +111,16 @@ impl From<Vec<CommentConfig>> for CommentConfigList {
 }
 
 impl CommentConfigList {
-    pub fn get_commenter(&self, filename: &str) -> Box<dyn Comment> {
+    /// Get the commenter for the given filename or None if no specific commenter available
+    pub fn get_commenter(&self, filename: &str) -> Option<Box<dyn Comment>> {
         let file_type = get_filetype(filename);
 
         for c in &self.cfgs {
             if c.matches(file_type, filename) {
-                return c.commenter();
+                return Some(c.commenter());
             }
         }
-
-        CommentConfig::default().commenter()
+        None
     }
 }
 
