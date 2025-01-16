@@ -1,3 +1,5 @@
+use std::path::Path;
+
 // Copyright (C) 2024 Mathew Robinson <chasinglogic@gmail.com>
 //
 // This program is free software: you can redistribute it and/or modify it under
@@ -24,7 +26,20 @@ fn def_trailing_lines() -> usize {
 }
 
 pub fn get_filetype(filename: &str) -> &str {
-    let iter = filename.split('.');
+    // Get just the filename component of the given filename (which is really a path)
+    let path_filename = Path::new(filename)
+        .file_name()
+        .unwrap_or_default()
+        // We should always be able to go to_str here because we created the os_str from a &str
+        .to_str()
+        .unwrap();
+
+    // If there's no "." in the filename, return no extension
+    if !path_filename.contains('.') {
+        return "";
+    }
+
+    let iter = path_filename.split('.');
     iter.last().unwrap_or_default()
 }
 
@@ -140,7 +155,19 @@ pub mod tests {
 
     #[test]
     fn test_get_filetype() {
-        assert_eq!("py", get_filetype("test.py"))
+        assert_eq!("py", get_filetype("test.py"));
+        assert_eq!("htaccess", get_filetype(".htaccess"));
+        assert_eq!("htaccess", get_filetype("/foo/bar/.htaccess"));
+        assert_eq!("htaccess", get_filetype("./foo/.bar/.htaccess"));
+        assert_eq!("htaccess", get_filetype("./.htaccess"));
+        assert_eq!("html", get_filetype("index.html"));
+        assert_eq!("html", get_filetype("/foo/bar/index.html"));
+        assert_eq!("html", get_filetype("./foo/.bar/index.html"));
+        assert_eq!("html", get_filetype("./index.html"));
+        assert_eq!("", get_filetype("NONE"));
+        assert_eq!("", get_filetype("/foo/bar/NONE"));
+        assert_eq!("", get_filetype("./foo/.bar/NONE"));
+        assert_eq!("", get_filetype("./NONE"));
     }
 
     static COMMENT_CONFIG_PY: &str = r##"columns: 80
