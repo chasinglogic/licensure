@@ -36,16 +36,11 @@ mod license;
 fn default_off() -> bool {
     false
 }
-fn default_on() -> bool {
-    true
-}
 
 #[derive(Deserialize, Debug)]
 pub struct Config {
     #[serde(default = "default_off")]
     pub change_in_place: bool,
-    #[serde(default = "default_on")]
-    pub default_commenter: bool,
 
     pub excludes: RegexList,
     pub licenses: LicenseConfigList,
@@ -126,10 +121,6 @@ impl CommentConfigList {
             }
         }
         None
-    }
-
-    pub fn get_default_commenter(&self) -> Box<dyn Comment> {
-        CommentConfig::default().commenter()
     }
 }
 

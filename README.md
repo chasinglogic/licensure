@@ -197,19 +197,6 @@ is provided via the command line.
 change_in_place: true
 ```
 
-#### default_commenter
-
-Takes a boolean indicating whether a default commenter should be assumed if no
-other commenter matches a given file. This defaults to `true` but can be set to
-`false` to instead not comment in cases where no appropriate commenter can be
-found.
-
-**Example Configuration:**
-
-```yaml
-default_commenter: false
-```
-
 #### exclude
 
 Takes a list of strings that will be compiled as regexes to filter out

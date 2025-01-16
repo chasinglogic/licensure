@@ -168,11 +168,7 @@ impl Licensure {
         let commenter = match self.config.comments.get_commenter(file) {
             Some(c) => c,
             None => {
-                if self.config.default_commenter {
-                    self.config.comments.get_default_commenter()
-                } else {
-                    return LicenseStatus::NoCommenterMatched;
-                }
+                return LicenseStatus::NoCommenterMatched;
             }
         };
 
@@ -453,7 +449,6 @@ licenses:
     authors:
       - name: The Tester
     template: "New Test License [name of author]\nOnly For Testing"
-default_commenter: false
 comments: []
 "##;
 
@@ -469,37 +464,5 @@ comments: []
         .to_string();
         let result = l.add_license_header(&"test_file.c".to_string(), &mut content);
         assert_eq!(result, LicenseStatus::NoCommenterMatched);
-    }
-
-    static CONFIG_DEFAULT_COMMENTER_TRUE: &str = r##"
-excludes: []
-licenses:
-  - files: any
-    ident: TESTING
-    authors:
-      - name: The Tester
-    template: "New Test License [name of author]"
-comments: []
-"##;
-    #[test]
-    fn test_add_license_header_default_commenter_true() {
-        let config: Config = serde_yaml::from_str(CONFIG_DEFAULT_COMMENTER_TRUE)
-            .expect("Static config to be parsable");
-        let mut l = Licensure::new(config);
-        let mut content = r#"
-some content
-"#
-        .to_string();
-        let result = l.add_license_header(&"test_file.txt".to_string(), &mut content);
-        assert_eq!(
-            result,
-            LicenseStatus::NeedsUpdate(
-                r#"# New Test License The Tester
-
-some content
-"#
-                .to_string()
-            )
-        );
     }
 }
