@@ -11,6 +11,7 @@
 // You should have received a copy of the GNU General Public License along with
 // this program. If not, see <https://www.gnu.org/licenses/>.
 //
+use std::fmt;
 use std::fs::File;
 use std::io::{self, prelude::*};
 
@@ -20,10 +21,23 @@ use crate::comments::Comment;
 use crate::config::Config;
 use crate::template::Template;
 
-pub struct Licensure {
-    config: Config,
-    stats: LicenseStats,
-    check_mode: bool,
+enum Cause {
+    IO(io::Error),
+}
+
+pub struct Error {
+    context: String,
+    cause: Cause,
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}: ", self.context)?;
+
+        match &self.cause {
+            Cause::IO(err) => err.fmt(f),
+        }
+    }
 }
 
 #[derive(PartialEq, Eq, Debug)]
@@ -32,6 +46,12 @@ enum LicenseStatus {
     AlreadyLicensed,
     NoConfigMatched,
     NoCommenterMatched,
+}
+
+pub struct Licensure {
+    config: Config,
+    stats: LicenseStats,
+    check_mode: bool,
 }
 
 impl Licensure {
@@ -48,7 +68,7 @@ impl Licensure {
         self
     }
 
-    pub fn license_files(mut self, files: &[String]) -> Result<LicenseStats, io::Error> {
+    pub fn license_files(mut self, files: &[String]) -> Result<LicenseStats, Error> {
         self.stats = LicenseStats::new();
 
         for file in files {
@@ -61,8 +81,14 @@ impl Licensure {
 
             let mut content = String::new();
             {
-                let mut f = File::open(file)?;
-                f.read_to_string(&mut content)?;
+                let mut f = File::open(file).map_err(|e| Error {
+                    context: format!("failed to open file {}", file),
+                    cause: Cause::IO(e),
+                })?;
+                f.read_to_string(&mut content).map_err(|e| Error {
+                    context: format!("failed to read file {}", file),
+                    cause: Cause::IO(e),
+                })?;
             }
 
             match self.add_license_header(file, &mut content) {
@@ -79,14 +105,20 @@ impl Licensure {
         Ok(self.stats)
     }
 
-    fn handle_update(&self, file: &String, content: &str) -> Result<(), io::Error> {
+    fn handle_update(&self, file: &String, content: &str) -> Result<(), Error> {
         if self.check_mode {
             return Result::Ok(());
         }
 
         if self.config.change_in_place {
-            let mut f = File::create(file)?;
-            return f.write_all(content.as_bytes());
+            let mut f = File::create(file).map_err(|e| Error {
+                context: format!("failed to create file {}", file),
+                cause: Cause::IO(e),
+            })?;
+            return f.write_all(content.as_bytes()).map_err(|e| Error {
+                context: format!("failed to write to file {}", file),
+                cause: Cause::IO(e),
+            });
         }
 
         println!("{}", content);
@@ -148,7 +180,6 @@ impl Licensure {
 
     fn add_header(&self, mut header: String, content: &mut String) -> String {
         if let Some(value) = Self::strip_shebang_if_found(content) {
-            println!("Shebang: {}", value);
             header.insert_str(0, &value);
         }
 
