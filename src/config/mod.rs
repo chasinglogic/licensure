@@ -131,8 +131,8 @@ pub struct LicenseConfigList {
 }
 
 impl LicenseConfigList {
-    pub fn get_template(&self, filename: &str) -> Option<Template> {
-        for cfg in &self.cfgs {
+    pub fn get_template(&mut self, filename: &str) -> Option<Template> {
+        for cfg in &mut self.cfgs {
             if cfg.file_is_match(filename) {
                 return Some(cfg.get_template(filename));
             }

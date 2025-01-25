@@ -13,11 +13,11 @@
 //
 use std::process::{self, Command};
 
-use super::RegexList;
 use chrono::Local;
 use regex::Regex;
 use serde::{Deserialize, Deserializer};
 
+use super::RegexList;
 use crate::template::{Authors, Context, Template};
 
 #[derive(Deserialize, Debug)]
@@ -61,6 +61,57 @@ struct SPDXLicenseInfo {
     license_header: Option<String>,
 }
 
+fn fetch_template(ident: &str) -> String {
+    let url = format!("https://spdx.org/licenses/{}.json", ident);
+    let response = match ureq::get(&url).call() {
+        Ok(r) => r,
+        Err(e) => {
+            println!("Failed to fetch license template from SPDX: {}", e);
+            process::exit(1);
+        }
+    };
+
+    match response.status() {
+        404 => {
+            println!(
+                    "{} does not appear to be a valid SPDX identifier, go to https://spdx.org/licenses/ to view a list of valid identifiers",
+                    ident
+                );
+            process::exit(1)
+        }
+        200 => (),
+        _ => {
+            println!(
+                "Failed to fetch license template from SPDX for {}: {:?}",
+                ident,
+                response.status()
+            );
+            process::exit(1);
+        }
+    }
+
+    let license_info: SPDXLicenseInfo = match response.into_json() {
+        Ok(json) => json,
+        Err(err) => {
+            println!("Failed to deserialize SPDX JSON: {}", err);
+            process::exit(1);
+        }
+    };
+
+    match license_info.license_header {
+        Some(header) => header,
+        None => license_info.license_text,
+    }
+}
+
+fn default_unwrap_text() -> bool {
+    true
+}
+
+fn default_dynamic_year_ranges() -> bool {
+    false
+}
+
 #[derive(Deserialize, Debug)]
 pub struct Config {
     files: FileMatcher,
@@ -83,69 +134,19 @@ pub struct Config {
     unwrap_text: bool,
 }
 
-fn default_unwrap_text() -> bool {
-    true
-}
-
-fn default_dynamic_year_ranges() -> bool {
-    false
-}
-
 impl Config {
     pub fn file_is_match(&self, s: &str) -> bool {
         self.files.is_match(s)
     }
 
-    fn fetch_template(&self) -> String {
-        let url = format!("https://spdx.org/licenses/{}.json", &self.ident);
-        let response = match ureq::get(&url).call() {
-            Ok(r) => r,
-            Err(e) => {
-                println!("Failed to fetch license template from SPDX: {}", e);
-                process::exit(1);
-            }
-        };
-
-        match response.status() {
-            404 => {
-                println!(
-                    "{} does not appear to be a valid SPDX identifier, go to https://spdx.org/licenses/ to view a list of valid identifiers",
-                    &self.ident
-                );
-                process::exit(1)
-            }
-            200 => (),
-            _ => {
-                println!(
-                    "Failed to fetch license template from SPDX for {}: {:?}",
-                    &self.ident,
-                    response.status()
-                );
-                process::exit(1);
-            }
-        }
-
-        let license_info: SPDXLicenseInfo = match response.into_json() {
-            Ok(json) => json,
-            Err(err) => {
-                println!("Failed to deserialize SPDX JSON: {}", err);
-                process::exit(1);
-            }
-        };
-
-        match license_info.license_header {
-            Some(header) => header,
-            None => license_info.license_text,
-        }
-    }
-
-    pub fn get_template(&self, filename: &str) -> Template {
+    pub fn get_template(&mut self, filename: &str) -> Template {
         let auto_templ;
         let t = match &self.template {
             Some(ref t) => t,
             None => {
                 if self.auto_template.unwrap_or(false) {
-                    auto_templ = self.fetch_template();
+                    auto_templ = fetch_template(&self.ident);
+                    self.template = Some(auto_templ.clone());
                     &auto_templ
                 } else {
                     println!("auto_template not enabled and no template provided, please add a template option to the license definition for {}. Exitting", self.ident);
