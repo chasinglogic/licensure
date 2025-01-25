@@ -14,12 +14,16 @@
 use std::fmt;
 use std::fs::File;
 use std::io::{self, prelude::*};
+use std::sync::LazyLock;
 
 use regex::Regex;
 
 use crate::comments::Comment;
 use crate::config::Config;
 use crate::template::Template;
+
+static SHEBANG_REGEX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^#!.*\n").expect("shebang regex didn't compile!"));
 
 enum Cause {
     IO(io::Error),
@@ -77,7 +81,7 @@ impl Licensure {
                 continue;
             }
 
-            trace!("Working on file: {}", &file);
+            debug!("working on file: {}", &file);
 
             let mut content = String::new();
             {
@@ -125,13 +129,12 @@ impl Licensure {
         Result::Ok(())
     }
 
+    /// Strip the shebang from content and return the stripped string so it can later be added back
+    /// to the content.
     fn strip_shebang_if_found(content: &mut String) -> Option<String> {
-        // Can't use Option::map because of double borrow.
+        // Can't use Option::map because of double borrow of content.
         #[allow(clippy::manual_map)]
-        match Regex::new(r"^#!.*\n")
-            .expect("shebang regex didn't compile!")
-            .find(content)
-        {
+        match SHEBANG_REGEX.find(content) {
             // If we idenfied a shebang, strip it from content (we'll add it back at the end)
             Some(shebang_match) => Some(content.drain(..shebang_match.end()).collect()),
             None => None,
@@ -155,7 +158,7 @@ impl Licensure {
 
         // Account for possible whitespace changes
         let trimmed_outdated_re = templ.outdated_license_trimmed_pattern(commenter);
-        trace!("trimmed_outdated_re Regex: {:?}", trimmed_outdated_re);
+        trace!("trimmed_outdated_re regex: {:?}", trimmed_outdated_re);
         if trimmed_outdated_re.is_match(content) {
             Some(trimmed_outdated_re.replace(content, header).to_string())
         } else {
