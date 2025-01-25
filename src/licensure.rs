@@ -190,7 +190,7 @@ impl Licensure {
                 .collect::<Vec<_>>()
                 .join("");
 
-            Some(content.replace(&old_header, header).to_string())
+            Some(content.replacen(&old_header, header, 1).to_string())
         } else {
             None
         }
