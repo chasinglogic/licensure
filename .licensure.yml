@@ -12,6 +12,7 @@ excludes:
   - Cargo.toml
   - Cross.toml
   - .*\.github/.*
+  - test/data/src/main.rs
 # Definition of the licenses used on this project and to what files
 # they should apply.
 licenses:
