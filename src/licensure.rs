@@ -41,7 +41,7 @@ impl fmt::Display for Error {
 }
 
 #[derive(PartialEq, Eq, Debug)]
-enum LicenseStatus {
+enum Action {
     NeedsUpdate(String),
     AlreadyLicensed,
     NoConfigMatched,
@@ -91,14 +91,14 @@ impl Licensure {
                 })?;
             }
 
-            match self.add_license_header(file, &mut content) {
-                LicenseStatus::NeedsUpdate(update) => self.handle_update(file, &update)?,
-                LicenseStatus::NoConfigMatched => self.stats.files_not_licensed.push(file.clone()),
-                LicenseStatus::NoCommenterMatched => {
+            match self.determine_required_action(file, &mut content) {
+                Action::NeedsUpdate(update) => self.handle_update(file, &update)?,
+                Action::NoConfigMatched => self.stats.files_not_licensed.push(file.clone()),
+                Action::NoCommenterMatched => {
                     self.stats.files_not_licensed.push(file.clone());
                     self.stats.files_needing_commenter.push(file.clone())
                 }
-                LicenseStatus::AlreadyLicensed => continue,
+                Action::AlreadyLicensed => continue,
             }
         }
 
@@ -187,19 +187,19 @@ impl Licensure {
         header
     }
 
-    fn add_license_header(&mut self, file: &String, content: &mut String) -> LicenseStatus {
+    fn determine_required_action(&mut self, file: &String, content: &mut String) -> Action {
         let templ = match self.config.licenses.get_template(file) {
             Some(t) => t,
             None => {
                 info!("skipping {} because no license config matched.", file);
-                return LicenseStatus::NoConfigMatched;
+                return Action::NoConfigMatched;
             }
         };
 
         let commenter = match self.config.comments.get_commenter(file) {
             Some(c) => c,
             None => {
-                return LicenseStatus::NoCommenterMatched;
+                return Action::NoCommenterMatched;
             }
         };
 
@@ -207,7 +207,7 @@ impl Licensure {
         let header = commenter.comment(&uncommented);
         if content.contains(&header) || content.contains(header.trim_end()) {
             info!("{} already licensed", file);
-            return LicenseStatus::AlreadyLicensed;
+            return Action::AlreadyLicensed;
         }
 
         if let Some(update) =
@@ -215,19 +215,19 @@ impl Licensure {
         {
             info!("{} licensed, but year is outdated", file);
             self.stats.files_needing_license_update.push(file.clone());
-            return LicenseStatus::NeedsUpdate(update);
+            return Action::NeedsUpdate(update);
         }
 
         if let Some(replaces) = self.config.licenses.get_replaces(file) {
             if let Some(update) = self.get_replaces_replacement(replaces, content, &header) {
                 info!("{} licensed, but license is outdated", file);
                 self.stats.files_needing_license_update.push(file.clone());
-                return LicenseStatus::NeedsUpdate(update);
+                return Action::NeedsUpdate(update);
             }
         }
 
         self.stats.files_needing_license_update.push(file.clone());
-        LicenseStatus::NeedsUpdate(self.add_header(header, content))
+        Action::NeedsUpdate(self.add_header(header, content))
     }
 }
 
@@ -455,10 +455,10 @@ if __name__ == '__main__':
     main()
 "#
         .to_string();
-        let result = l.add_license_header(&"test_file.py".to_string(), &mut content);
+        let result = l.determine_required_action(&"test_file.py".to_string(), &mut content);
         assert_eq!(
             result,
-            LicenseStatus::NeedsUpdate(
+            Action::NeedsUpdate(
                 r#"
 # New Test License The Tester Only For Testing
 def main():
@@ -493,7 +493,7 @@ comments: []
 # include somefile.h
 "#
         .to_string();
-        let result = l.add_license_header(&"test_file.c".to_string(), &mut content);
-        assert_eq!(result, LicenseStatus::NoCommenterMatched);
+        let result = l.determine_required_action(&"test_file.c".to_string(), &mut content);
+        assert_eq!(result, Action::NoCommenterMatched);
     }
 }
