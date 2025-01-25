@@ -20,6 +20,7 @@ mod line_comment;
 
 pub trait Comment {
     fn comment(&self, text: &str) -> String;
+    fn comment_width(&self) -> usize;
 }
 
 #[cfg(test)]

@@ -18,7 +18,6 @@ use regex::Regex;
 use serde::Deserialize;
 
 use crate::comments::Comment;
-use crate::utils::remove_column_wrapping;
 
 #[derive(Clone, Deserialize, Debug)]
 struct CopyrightHolder {
@@ -66,7 +65,7 @@ impl fmt::Display for Authors {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Context {
     pub ident: String,
     pub authors: Authors,
@@ -126,37 +125,21 @@ impl Template {
         self
     }
 
-    pub fn outdated_license_pattern(&self, commenter: &dyn Comment) -> Regex {
-        self.build_year_varying_regex(commenter, false)
-    }
-
-    pub fn outdated_license_trimmed_pattern(&self, commenter: &dyn Comment) -> Regex {
-        self.build_year_varying_regex(commenter, true)
-    }
-
     pub fn render(&self) -> String {
         self.interpolate(&self.context)
     }
 
     fn interpolate(&self, context: &Context) -> String {
         let (year_repl, author_repl, ident_repl) = self.replacement_tokens();
-        let templ = if self.context.unwrap_text {
-            // Some license headers come pre-textwrapped. This regex
-            // replacement removes their wrapping while preserving
-            // intentional line breaks / empty lines.
-            remove_column_wrapping(&self.content.clone())
-        } else {
-            self.content.clone()
-        };
-
         // Perform our substitutions
-        templ
+        self.content
+            .clone()
             .replace(year_repl, &context.get_year())
             .replace(author_repl, &context.get_authors())
             .replace(ident_repl, &context.ident)
     }
 
-    fn build_year_varying_regex(&self, commenter: &dyn Comment, trim_trailing: bool) -> Regex {
+    pub fn build_year_varying_regex(&self, commenter: &dyn Comment, trim_trailing: bool) -> Regex {
         let mut context = self.context.clone();
 
         // interpolate the header with the intermediate year token
@@ -164,9 +147,7 @@ impl Template {
         // The year regex accounts for ranges so we don't need to worry about start_year here.
         context.start_year = None;
 
-        let interpolated_header = self.interpolate(&context);
-        let mut rendered = commenter.comment(&interpolated_header);
-
+        let mut rendered = self.interpolate(&context);
         if trim_trailing {
             rendered = rendered.trim_end().to_string();
         }
@@ -192,9 +173,14 @@ impl Template {
             // the exact license header text, but with any 4-digit year.
             //
             // And we only care about 4-digit years in our lifetime ;).
-            .join(YEAR_RE);
+            .join(YEAR_RE)
+            .lines()
+            .filter(|line| line.len() > 0)
+            .collect::<Vec<&str>>()
+            .join(" ")
+            .replace(" ", "(NEWLINE| )+");
 
-        Regex::new(&escaped).unwrap()
+        Regex::new(&escaped).expect("year varying regex somehow failed to compile!")
     }
 
     fn replacement_tokens(&self) -> (&'static str, &'static str, &'static str) {
@@ -226,7 +212,10 @@ impl Template {
 pub fn test_context(year: &str) -> Context {
     Context {
         ident: String::from("test"),
-        authors: Authors::from(vec![]),
+        authors: Authors::from(vec![CopyrightHolder {
+            name: "Mathew Robinson".to_string(),
+            email: Some("chasinglogic@gmail.com".to_string()),
+        }]),
         end_year: Some(String::from(year)),
         start_year: None,
         unwrap_text: true,
@@ -246,51 +235,14 @@ pub fn test_context_with_range(start_year: &str, end_year: &str) -> Context {
 
 #[cfg(test)]
 mod tests {
-    use crate::comments::LineComment;
-
     use super::*;
-
-    #[test]
-    fn test_year_varying_regex_untrimmed() {
-        let context = test_context("2020");
-        let template = Template::new("License [year]\n\ntext", context);
-        let commenter = LineComment::new("#", None);
-        let rgx = template.outdated_license_pattern(&commenter);
-        let expected = Regex::new("\\# License [0-9]{4}(, [0-9]{4})?\n\\#\n\\# text\n")
-            .expect("This should have compiled?");
-
-        assert_eq!(rgx.to_string(), expected.to_string());
-        assert!(rgx.is_match(
-            r#"# License 2020
-#
-# text
-"#
-        ));
-    }
-
-    #[test]
-    fn test_year_varying_regex_trimmed() {
-        let context = test_context("2020");
-        let template = Template::new("License [year]\n\ntext", context);
-        let commenter = LineComment::new("#", None);
-        let rgx = template.outdated_license_trimmed_pattern(&commenter);
-        let expected = Regex::new("\\# License [0-9]{4}(, [0-9]{4})?\n\\#\n\\# text")
-            .expect("This should have compiled?");
-
-        assert_eq!(rgx.to_string(), expected.to_string());
-        assert!(rgx.is_match(
-            r#"# License 2020
-#
-# text"#
-        ));
-    }
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn test_substitution_at_end_of_line() {
         let context = test_context("2020");
         let template = Template::new("License [year]\ntext", context);
-        // Newline is removed because of column unwrapping.
-        let expected = String::from("License 2020 text");
+        let expected = String::from("License 2020\ntext");
         assert_eq!(expected, template.render())
     }
 
@@ -308,137 +260,6 @@ mod tests {
         };
         let template = Template::new("Copyright (C) [year] [name of author] This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, version 3. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>", context);
         let expected = String::from("Copyright (C) 2020 Mathew Robinson <chasinglogic@gmail.com> This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, version 3. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>");
-        assert_eq!(expected, template.render())
-    }
-
-    #[test]
-    fn test_outdated_license_matching() {
-        let context = Context {
-            ident: String::from("test"),
-            authors: Authors::from(vec![CopyrightHolder {
-                name: "Mathew Robinson".to_string(),
-                email: Some("chasinglogic@gmail.com".to_string()),
-            }]),
-            end_year: Some(String::from("2022")),
-            start_year: None,
-            unwrap_text: true,
-        };
-        let template = Template::new(
-            "Copyright (C) [year] [name of author] This program is free software.",
-            context,
-        );
-        let commenter: Box<dyn Comment> = Box::new(LineComment::new("#", Option::Some(1000)));
-        let re = template.outdated_license_pattern(commenter.as_ref());
-        assert!(re.is_match("# Copyright (C) 2020 Mathew Robinson <chasinglogic@gmail.com> This program is free software.\n"))
-    }
-
-    #[test]
-    fn test_outdated_license_trimmed_matching() {
-        let context = Context {
-            ident: String::from("test"),
-            authors: Authors::from(vec![CopyrightHolder {
-                name: "Mathew Robinson".to_string(),
-                email: Some("chasinglogic@gmail.com".to_string()),
-            }]),
-            end_year: Some(String::from("2022")),
-            start_year: None,
-            unwrap_text: true,
-        };
-        let template = Template::new(
-            "Copyright (C) [year] [name of author] This program is free software.",
-            context,
-        );
-        let commenter: Box<dyn Comment> =
-            Box::new(LineComment::new("#", Option::Some(1000)).set_trailing_lines(2));
-        let re = template.outdated_license_pattern(commenter.as_ref());
-        assert!(re.is_match("# Copyright (C) 2020 Mathew Robinson <chasinglogic@gmail.com> This program is free software.\n\n\n"));
-        assert!(!re.is_match("# Copyright (C) 2020 Mathew Robinson <chasinglogic@gmail.com> This program is free software."));
-
-        let trimmed = template.outdated_license_trimmed_pattern(commenter.as_ref());
-        assert!(trimmed.is_match("# Copyright (C) 2020 Mathew Robinson <chasinglogic@gmail.com> This program is free software."))
-    }
-
-    #[test]
-    fn test_substitutions_prewrapped() {
-        let context = Context {
-            ident: String::from("test"),
-            authors: Authors::from(vec![CopyrightHolder {
-                name: "Mathew Robinson".to_string(),
-                email: Some("chasinglogic@gmail.com".to_string()),
-            }]),
-            end_year: Some(String::from("2020")),
-            start_year: None,
-            unwrap_text: true,
-        };
-        let template = Template::new(
-            "Copyright (C) [year] [name of author] This
-program is free software: you can redistribute it and/or modify it under
-the terms of the GNU Affero General Public License as published by the
-Free Software Foundation, version 3. This program is distributed in the
-hope that it will be useful, but WITHOUT ANY WARRANTY; without even the
-implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-See the GNU Affero General Public License for more details. You should
-have received a copy of the GNU Affero General Public License along with
-this program. If not, see <https://www.gnu.org/licenses/>",
-            context,
-        );
-        let expected = String::from("Copyright (C) 2020 Mathew Robinson <chasinglogic@gmail.com> This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, version 3. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>");
-        assert_eq!(expected, template.render())
-    }
-
-    // https://github.com/chasinglogic/licensure/issues/25
-    #[test]
-    fn test_substitutions_unwrap_text_false() {
-        let context = Context {
-            ident: String::from("test"),
-            authors: Authors::from(vec![CopyrightHolder {
-                name: "Mathew Robinson".to_string(),
-                email: Some("chasinglogic@gmail.com".to_string()),
-            }]),
-            end_year: Some(String::from("2020")),
-            start_year: None,
-            unwrap_text: false,
-        };
-        let template = Template::new(
-            "Copyright (c) [name of author]
- SPDX-License-Identifier: [ident]",
-            context,
-        );
-        let expected = String::from(
-            "Copyright (c) Mathew Robinson <chasinglogic@gmail.com>
- SPDX-License-Identifier: test",
-        );
-        assert_eq!(expected, template.render())
-    }
-
-    #[test]
-    fn test_substitutions_prewrapped_preserves_linebreaks() {
-        let context = Context {
-            ident: String::from("test"),
-            authors: Authors::from(vec![CopyrightHolder {
-                name: "Mathew Robinson".to_string(),
-                email: Some("chasinglogic@gmail.com".to_string()),
-            }]),
-            end_year: Some(String::from("2020")),
-            start_year: None,
-            unwrap_text: true,
-        };
-        let template = Template::new(
-            "Copyright (C) [year] [name of author] This
-program is free software: you can redistribute it and/or modify it under
-the terms of the GNU Affero General Public License as published by the
-
-Free Software Foundation, version 3. This program is distributed in the
-hope that it will be useful, but WITHOUT ANY WARRANTY; without even the
-implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-See the GNU Affero General Public License for more details. You should
-have received a copy of the GNU Affero General Public License along with
-this program. If not, see <https://www.gnu.org/licenses/>",
-            context,
-        );
-        let expected = String::from("Copyright (C) 2020 Mathew Robinson <chasinglogic@gmail.com> This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the
-
-Free Software Foundation, version 3. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>");
         assert_eq!(expected, template.render())
     }
 

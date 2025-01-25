@@ -148,23 +148,78 @@ impl Licensure {
         content: &str,
         header: &str,
     ) -> Option<String> {
-        let outdated_re = templ.outdated_license_pattern(commenter);
-        trace!("Content: {}", content);
-        trace!("Outdated Regex: {:?}", outdated_re);
-        trace!("Header: {:?}", header);
-        if outdated_re.is_match(content) {
-            return Some(outdated_re.replace(content, header).to_string());
-        }
+        let comment_width = commenter.comment_width();
+        let normalised = content
+            .to_string()
+            .clone()
+            .lines()
+            .map(|line| {
+                line.chars()
+                    // Strip any comment characters off the front. We don't care what this does to the
+                    // rest of the content since we're specifically trying to normalise the license
+                    // header itself.
+                    .skip(comment_width)
+                    .collect::<String>()
+                    // Trim so we can remove any erroneous blank lines that would cause double
+                    // spaces when we join.
+                    // .trim()
+                    .to_string()
+            })
+            // Remove blank lines for more consistent normalisation (otherwise we get double spaces
+            // in some spots).
+            // .filter(|line| line.len() > 0)
+            .collect::<Vec<String>>()
+            .join("NEWLINE");
 
-        // Account for possible whitespace changes
-        let trimmed_outdated_re = templ.outdated_license_trimmed_pattern(commenter);
-        trace!("trimmed_outdated_re regex: {:?}", trimmed_outdated_re);
-        if trimmed_outdated_re.is_match(content) {
-            Some(trimmed_outdated_re.replace(content, header).to_string())
+        let rgx = templ.build_year_varying_regex(commenter, false);
+        if let Some(m) = rgx.find(&normalised) {
+            let start = m.start();
+            let end = m.end();
+            let found_header = &normalised[start..end];
+            let prefix = &normalised[..start];
+            let nl = Regex::new("NEWLINE").expect("ahhh");
+
+            let header_size = nl.split(found_header).count() + 1;
+            let prefix_size = nl.split(prefix).count() - 1;
+
+            let old_header = content
+                .to_string()
+                .split_inclusive('\n')
+                .skip(prefix_size)
+                .take(header_size)
+                .collect::<Vec<_>>()
+                .join("");
+
+            Some(content.replace(&old_header, header).to_string())
         } else {
             None
         }
     }
+
+    // fn get_outdated_replacement(
+    //     &self,
+    //     templ: &Template,
+    //     commenter: &dyn Comment,
+    //     content: &str,
+    //     header: &str,
+    // ) -> Option<String> {
+    //     let outdated_re = templ.outdated_license_pattern(commenter);
+    //     trace!("Content: {}", content);
+    //     trace!("Outdated Regex: {:?}", outdated_re);
+    //     if outdated_re.is_match(content) {
+    //         trace!("outdated regex matched.");
+    //         return Some(outdated_re.replace(content, header).to_string());
+    //     }
+
+    //     // Account for possible whitespace changes
+    //     let trimmed_outdated_re = templ.outdated_license_trimmed_pattern(commenter);
+    //     trace!("trimmed_outdated_re regex: {:?}", trimmed_outdated_re);
+    //     if trimmed_outdated_re.is_match(content) {
+    //         Some(trimmed_outdated_re.replace(content, header).to_string())
+    //     } else {
+    //         None
+    //     }
+    // }
 
     fn get_replaces_replacement(
         &self,
@@ -229,6 +284,7 @@ impl Licensure {
             }
         }
 
+        info!("{} is not licensed", file);
         self.stats.files_needing_license_update.push(file.clone());
         Action::NeedsUpdate(self.add_header(header, content))
     }
@@ -259,6 +315,7 @@ mod test {
         comments::LineComment,
         template::{test_context, Template},
     };
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn test_detects_outdated_year() {
@@ -308,6 +365,81 @@ mod test {
         let content = "# License 2020\n#\n# text\n";
         let result = l.get_outdated_replacement(&templ, &commenter, content, &header);
         assert!(result.is_some());
+    }
+
+    #[test]
+    fn test_detects_outdated_year_when_upstream_template_changes_wrapping() {
+        let l = Licensure::new(Config::default());
+        let templ = Template::new(
+            r#"Copyright (C) <year> <name of author>
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, version 3.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+"#,
+            test_context("2025"),
+        ).set_spdx_template(true);
+        let commenter = LineComment::new("//", Some(98)).skip_trailing_lines();
+        let rendered = templ.render();
+        let header = commenter.comment(&rendered);
+        let content = r#"// Copyright (C) 2024 Mathew Robinson <chasinglogic@gmail.com>
+//
+// This program is free software: you can redistribute it and/or modify it under
+// the terms of the GNU General Public License as published by the Free Software
+// Foundation, version 3.
+//
+// This program is distributed in the hope that it will be useful, but WITHOUT
+// ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+// FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License along with
+// this program. If not, see <https://www.gnu.org/licenses/>.
+//
+use std::fmt;
+use std::fs::File;
+use std::io::{self, prelude::*};
+use std::sync::LazyLock;
+
+use regex::Regex;
+
+use crate::comments::Comment;
+use crate::config::Config;
+use crate::template::Template;"#;
+        let result = l.get_outdated_replacement(&templ, &commenter, content, &header);
+        if let Some(replacement) = result {
+            assert_eq!(
+                replacement,
+                r#"// Copyright (C) 2025 Mathew Robinson <chasinglogic@gmail.com>
+// This program is free software: you can redistribute it and/or modify it under the terms of the
+// GNU General Public License as published by the Free Software Foundation, version 3.
+//
+// This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+// without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See
+// the GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License along with this program. If
+// not, see <https://www.gnu.org/licenses/>.
+//
+use std::fmt;
+use std::fs::File;
+use std::io::{self, prelude::*};
+use std::sync::LazyLock;
+
+use regex::Regex;
+
+use crate::comments::Comment;
+use crate::config::Config;
+use crate::template::Template;"#
+                    .to_string()
+            )
+        } else {
+            assert!(
+                false,
+                "get_oudated_replacement didn't match the old header!"
+            )
+        }
     }
 
     #[test]
@@ -463,7 +595,8 @@ if __name__ == '__main__':
             result,
             Action::NeedsUpdate(
                 r#"
-# New Test License The Tester Only For Testing
+# New Test License The Tester
+# Only For Testing
 def main():
     print('hello world')
 

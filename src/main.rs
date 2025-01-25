@@ -39,7 +39,6 @@ mod comments;
 mod config;
 mod licensure;
 mod template;
-mod utils;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const AUTHORS: &str = env!("CARGO_PKG_AUTHORS");
@@ -77,8 +76,8 @@ fn git_ls_files(extra_args: Vec<&str>) -> Vec<String> {
             .map(str::to_string)
             .collect(),
         Err(e) => {
-            println!("Failed to run git ls-files. Make sure you're in a git repo.");
-            println!("{}", e);
+            eprintln!("Failed to run git ls-files. Make sure you're in a git repo.");
+            eprintln!("{}", e);
             process::exit(1)
         }
     }
@@ -161,13 +160,13 @@ More information is available at: {}",
         let mut f = match File::create(".licensure.yml") {
             Ok(f) => f,
             Err(e) => {
-                println!("Unable to create .licensure.yml: {}", e);
+                eprintln!("Unable to create .licensure.yml: {}", e);
                 process::exit(1);
             }
         };
 
         if let Err(e) = f.write_all(DEFAULT_CONFIG.as_bytes()) {
-            println!("Unable to write to .licensure.yml: {}", e);
+            eprintln!("Unable to write to .licensure.yml: {}", e);
             process::exit(1);
         }
 
@@ -188,9 +187,9 @@ More information is available at: {}",
         Ok(c) => c,
         Err(e) => {
             if ErrorKind::NotFound == e.kind() {
-                println!("No config file found, generate one with licensure --generate-config");
+                eprintln!("No config file found, generate one with licensure --generate-config");
             } else {
-                println!("Error loading config file: {}", e);
+                eprintln!("Error loading config file: {}", e);
             }
 
             process::exit(1);
@@ -208,7 +207,7 @@ More information is available at: {}",
     let licensure = Licensure::new(config).with_check_mode(matches.is_present("check"));
     match licensure.license_files(&files) {
         Err(e) => {
-            println!("Failed to license files: {}", e);
+            eprintln!("Failed to license files: {}", e);
             process::exit(1);
         }
         Ok(stats) => {

@@ -43,20 +43,21 @@ impl Comment for LineComment {
     fn comment(&self, text: &str) -> String {
         let local_copy = match self.cols {
             Some(cols) => {
-                // Subtract two columns to account for the comment
+                // Subtract the comment width to account for the comment
                 // character and space we will add later.
-                textwrap::fill(text, if cols > 2 { cols - 2 } else { cols })
+                textwrap::fill(
+                    text,
+                    if cols > self.comment_width() {
+                        cols - self.comment_width()
+                    } else {
+                        cols
+                    },
+                )
             }
             None => text.to_string(),
         };
 
-        let mut lines: Vec<&str> = local_copy.split('\n').collect();
-        // split always adds an empty element to the end of the vector
-        // so we filter it out here.
-        if !lines.is_empty() && lines.last().unwrap() == &"" {
-            lines.pop();
-        }
-
+        let lines = local_copy.lines();
         let mut new_text = "".to_string();
         for line in lines {
             let new_line = match line {
@@ -72,5 +73,9 @@ impl Comment for LineComment {
         }
 
         new_text
+    }
+
+    fn comment_width(&self) -> usize {
+        self.character.len() + 1
     }
 }

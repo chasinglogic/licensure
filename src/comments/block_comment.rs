@@ -61,4 +61,12 @@ impl Comment for BlockComment {
 
         new_text
     }
+
+    fn comment_width(&self) -> usize {
+        if let Some(ref character) = self.per_line {
+            character.comment_width()
+        } else {
+            0
+        }
+    }
 }
