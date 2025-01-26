@@ -160,14 +160,8 @@ impl Licensure {
                     // header itself.
                     .skip(comment_width)
                     .collect::<String>()
-                    // Trim so we can remove any erroneous blank lines that would cause double
-                    // spaces when we join.
-                    // .trim()
                     .to_string()
             })
-            // Remove blank lines for more consistent normalisation (otherwise we get double spaces
-            // in some spots).
-            // .filter(|line| line.len() > 0)
             .collect::<Vec<String>>()
             .join("NEWLINE");
 
