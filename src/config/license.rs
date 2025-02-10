@@ -156,32 +156,39 @@ impl Config {
         };
 
         let (end_year, start_year) = if self.use_dynamic_year_ranges {
-            let now_date = Local::now().format("%a %b %d %T %Y %z").to_string();
+            let now_date = Local::now().format("%Y").to_string();
             let dates = get_git_dates_for_file(filename);
-            let (last_updated_date, created_date) = match &dates[..] {
-                [first_date, .., last_date] => (first_date, last_date),
-                [first_date] => (first_date, first_date),
-                _ => {
-                    debug!("Did not get any dates from git for file: {}", filename);
-                    (&now_date, &now_date)
-                }
-            };
-
             // Git formats the dates such that we get "Wed May 29 04:54:58 2024 +0100" we only care
             // about the 4th "field" which is the year.
-            let created_year = created_date
-                .split(' ')
-                .nth(4)
-                .expect("Unable to parse created year!");
-            let last_updated_year = last_updated_date
-                .split(' ')
-                .nth(4)
-                .expect("Unable to parse last updated year!");
+            let dates: Vec<_> = dates
+                .iter()
+                .map(|date| {
+                    date.split(' ')
+                        .nth(4)
+                        .expect("Unable to determine year!")
+                        .parse::<i32>()
+                        .expect("Unable to parse year as integer!")
+                })
+                .collect();
 
-            (
-                Some(last_updated_year.to_string()),
-                Some(created_year.to_string()),
-            )
+            let (last_updated_date, created_date) = if dates.is_empty() {
+                debug!("Did not get any dates from git for file: {}", filename);
+                (now_date.clone(), now_date)
+            } else {
+                (
+                    dates
+                        .iter()
+                        .max()
+                        .expect("Unable to determine last updated year!")
+                        .to_string(),
+                    dates
+                        .last()
+                        .expect("Unable to determine created year!")
+                        .to_string(),
+                )
+            };
+
+            (Some(last_updated_date), Some(created_date))
         } else {
             (self.end_year.clone(), self.start_year.clone())
         };
