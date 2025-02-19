@@ -13,7 +13,7 @@
 //
 use std::process::{self, Command};
 
-use chrono::Local;
+use chrono::{Datelike, Local};
 use regex::Regex;
 use serde::{Deserialize, Deserializer};
 
@@ -108,6 +108,10 @@ fn default_unwrap_text() -> bool {
     true
 }
 
+fn default_dynamic_year() -> bool {
+    false
+}
+
 fn default_dynamic_year_ranges() -> bool {
     false
 }
@@ -121,6 +125,8 @@ pub struct Config {
     #[serde(alias = "year")]
     end_year: Option<String>,
     start_year: Option<String>,
+    #[serde(default = "default_dynamic_year")]
+    use_dynamic_year: bool,
     #[serde(default = "default_dynamic_year_ranges")]
     use_dynamic_year_ranges: bool,
 
@@ -155,8 +161,7 @@ impl Config {
             }
         };
 
-        let (end_year, start_year) = if self.use_dynamic_year_ranges {
-            let now_date = Local::now().format("%Y").to_string();
+        let (end_year, start_year) = if self.use_dynamic_year_ranges || self.use_dynamic_year {
             let dates = get_git_dates_for_file(filename);
             // Git formats the dates such that we get "Wed May 29 04:54:58 2024 +0100" we only care
             // about the 4th "field" which is the year.
@@ -173,19 +178,23 @@ impl Config {
 
             let (last_updated_date, created_date) = if dates.is_empty() {
                 debug!("Did not get any dates from git for file: {}", filename);
-                (now_date.clone(), now_date)
+                let current_year = Local::now().year().to_string();
+                (current_year.clone(), current_year)
             } else {
-                (
+                let created_year = dates
+                    .last()
+                    .expect("Unable to determine created year!")
+                    .to_string();
+                let last_updated_year = if self.use_dynamic_year_ranges {
                     dates
                         .iter()
                         .max()
                         .expect("Unable to determine last updated year!")
-                        .to_string(),
-                    dates
-                        .last()
-                        .expect("Unable to determine created year!")
-                        .to_string(),
-                )
+                        .to_string()
+                } else {
+                    created_year.clone()
+                };
+                (last_updated_year, created_year)
             };
 
             (Some(last_updated_date), Some(created_date))

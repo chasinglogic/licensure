@@ -319,12 +319,16 @@ Copyright 2019, 2024 ...
 The `end_year` can also be specified but if omitted will automatically be
 updated to be the current year per your local system time.
 
-###### Automated year ranges
+#### Automated years per file
 
-If you want per-file year ranges or just automated ones you can opt in with the
-`use_dynamic_year_ranges: true` setting. This will use `git` commit information
-to determine a files created and last updated year. It will then license that
-file with a year range specific to it based on the `git` information.
+If you want per-file automated years you can opt in with the `use_dynamic_year: true` or
+`use_dynamic_year_ranges: true` settings.
+This will use the `git` commit author date information to determine a file created year and last updated year.
+
+With `use_dynamic_year: true` it will license that file with the created year of that file.  
+With `use_dynamic_year_range: true` it will license that file with a year range specific to it based on git information.  
+
+These settings will override `start_year` and `end_year` settings if they were set.
 
 #### comments
 
