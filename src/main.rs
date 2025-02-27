@@ -23,8 +23,8 @@ extern crate textwrap;
 extern crate ureq;
 
 use std::fs::File;
-use std::io::prelude::*;
 use std::io::ErrorKind;
+use std::io::prelude::*;
 use std::path::Path;
 use std::process;
 use std::process::Command;
@@ -179,9 +179,13 @@ More information is available at: {}",
     } else {
         matches
             .values_of("FILES")
-            .expect("ERROR: Must provide files to license either as matches or via --project")
-            .map(str::to_string)
-            .collect()
+            .map(|files| files.map(str::to_string).collect())
+            .unwrap_or_else(|| {
+                eprintln!(
+                    "ERROR: Must provide files to license either as matches or via --project"
+                );
+                process::exit(10);
+            })
     };
 
     let mut config = match config::load_config() {
