@@ -35,7 +35,7 @@ impl FileMatcher {
         match self {
             FileMatcher::Any => true,
             FileMatcher::Single(r) => r.is_match(s),
-            FileMatcher::RegexList(ref regex_list) => regex_list.is_match(s),
+            FileMatcher::RegexList(regex_list) => regex_list.is_match(s),
         }
     }
 }
@@ -74,9 +74,9 @@ fn fetch_template(ident: &str) -> String {
     match response.status() {
         404 => {
             println!(
-                    "{} does not appear to be a valid SPDX identifier, go to https://spdx.org/licenses/ to view a list of valid identifiers",
-                    ident
-                );
+                "{} does not appear to be a valid SPDX identifier, go to https://spdx.org/licenses/ to view a list of valid identifiers",
+                ident
+            );
             process::exit(1)
         }
         200 => (),
@@ -142,14 +142,17 @@ impl Config {
     pub fn get_template(&mut self, filename: &str) -> Template {
         let auto_templ;
         let t = match &self.template {
-            Some(ref t) => t,
+            Some(t) => t,
             None => {
                 if self.auto_template.unwrap_or(false) {
                     auto_templ = fetch_template(&self.ident);
                     self.template = Some(auto_templ.clone());
                     &auto_templ
                 } else {
-                    println!("auto_template not enabled and no template provided, please add a template option to the license definition for {}. Exitting", self.ident);
+                    println!(
+                        "auto_template not enabled and no template provided, please add a template option to the license definition for {}. Exitting",
+                        self.ident
+                    );
                     process::exit(1);
                 }
             }

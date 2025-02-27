@@ -73,7 +73,7 @@ impl FileType {
     fn matches(&self, ft: &str) -> bool {
         match self {
             FileType::Single(ext) => ext == "any" || ext == ft,
-            FileType::List(ref extensions) => extensions.iter().any(|ext| ext == ft),
+            FileType::List(extensions) => extensions.iter().any(|ext| ext == ft),
         }
     }
 }
