@@ -159,29 +159,28 @@ impl Config {
         };
 
         let (end_year, start_year) = if self.use_dynamic_year_ranges {
-            let now_date = Local::now().format("%Y").to_string();
-            let dates = get_git_dates_for_file(filename);
-            // Git formats the dates such that we get "Wed May 29 04:54:58 2024 +0100" we only care
-            // about the 4th "field" which is the year.
-            let dates: Vec<_> = dates
-                .iter()
-                .map(|date| {
-                    date.split(' ')
-                        .nth(4)
-                        .expect("Unable to determine year!")
-                        .parse::<i32>()
-                        .expect("Unable to parse year as integer!")
-                })
-                .collect();
+            let git_log_dates = get_git_dates_for_file(filename);
 
-            let (last_updated_date, created_date) = if dates.is_empty() {
+            let (last_updated_date, created_date) = if git_log_dates.is_empty() {
                 debug!("Did not get any dates from git for file: {}", filename);
-                (now_date.clone(), now_date)
+                let current_year = Local::now().format("%Y").to_string();
+                (current_year.clone(), current_year)
             } else {
+                let dates = [
+                    git_log_dates
+                        .first()
+                        .expect("somehow git_log_dates was empty!"),
+                    git_log_dates
+                        .last()
+                        .expect("somehow git_log_dates was empty!"),
+                ]
+                // Git formats the dates such that we get "Wed May 29 04:54:58 2024 +0100" we only care
+                // about the 4th "field" which is the year.
+                .map(|date| date.split(' ').nth(4).expect("Unable to determine year!"));
+
                 (
                     dates
-                        .iter()
-                        .max()
+                        .first()
                         .expect("Unable to determine last updated year!")
                         .to_string(),
                     dates
