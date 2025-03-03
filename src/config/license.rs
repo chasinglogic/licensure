@@ -13,7 +13,7 @@
 //
 use std::process::{self, Command};
 
-use chrono::Local;
+use chrono::prelude::*;
 use regex::Regex;
 use serde::{Deserialize, Deserializer};
 
@@ -159,39 +159,11 @@ impl Config {
         };
 
         let (end_year, start_year) = if self.use_dynamic_year_ranges {
-            let now_date = Local::now().format("%Y").to_string();
-            let dates = get_git_dates_for_file(filename);
-            // Git formats the dates such that we get "Wed May 29 04:54:58 2024 +0100" we only care
-            // about the 4th "field" which is the year.
-            let dates: Vec<_> = dates
-                .iter()
-                .map(|date| {
-                    date.split(' ')
-                        .nth(4)
-                        .expect("Unable to determine year!")
-                        .parse::<i32>()
-                        .expect("Unable to parse year as integer!")
-                })
-                .collect();
-
-            let (last_updated_date, created_date) = if dates.is_empty() {
-                debug!("Did not get any dates from git for file: {}", filename);
-                (now_date.clone(), now_date)
-            } else {
-                (
-                    dates
-                        .iter()
-                        .max()
-                        .expect("Unable to determine last updated year!")
-                        .to_string(),
-                    dates
-                        .last()
-                        .expect("Unable to determine created year!")
-                        .to_string(),
-                )
-            };
-
-            (Some(last_updated_date), Some(created_date))
+            let git_log_dates = get_git_years_for_file(filename);
+            (
+                self.end_year.clone().or(git_log_dates.first().cloned()),
+                self.start_year.clone().or(git_log_dates.last().cloned()),
+            )
         } else {
             (self.end_year.clone(), self.start_year.clone())
         };
@@ -219,7 +191,7 @@ impl Config {
     }
 }
 
-fn get_git_dates_for_file(filename: &str) -> Vec<String> {
+fn get_git_years_for_file(filename: &str) -> Vec<String> {
     match Command::new("git")
         .arg("log")
         .arg("--follow")
@@ -228,12 +200,30 @@ fn get_git_dates_for_file(filename: &str) -> Vec<String> {
         .arg(filename)
         .output()
     {
-        Ok(proc) => String::from_utf8(proc.stdout)
-            .expect("git log output was not UTF-8!")
-            .split('\n')
-            .map(str::to_string)
-            .filter(|s| !s.is_empty())
-            .collect(),
+        Ok(proc) => {
+            let git_log_years: Vec<_> = String::from_utf8(proc.stdout)
+                .expect("git log output was not UTF-8!")
+                .split('\n')
+                .map(str::to_string)
+                .filter(|s| !s.is_empty())
+                // Git formats the dates such that we get "Wed May 29 04:54:58 2024 +0100" we only care
+                // about the 4th "field" which is the year.
+                .map(|date| {
+                    date.split(' ')
+                        .nth(4)
+                        .expect("Unable to determine year!")
+                        .to_string()
+                })
+                .collect();
+
+            if git_log_years.is_empty() {
+                debug!("Did not get any dates from git for file: {}", filename);
+                let current_year = Local::now().format("%Y").to_string();
+                vec![current_year]
+            } else {
+                git_log_years
+            }
+        }
         Err(e) => {
             println!("Failed to run git log to get file dates. Make sure you're in a git repo.");
             println!("{}", e);
