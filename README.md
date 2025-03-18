@@ -326,6 +326,33 @@ If you want per-file year ranges or just automated ones you can opt in with the
 to determine a files created and last updated year. It will then license that
 file with a year range specific to it based on the `git` information.
 
+Note that this will respect the `start_year` and `end_year` settings and simply
+populate whichever you do not set accordingly to the year alone. For example if
+you have this config:
+
+```yaml
+licenses:
+  - files: any
+    use_dynamic_year_ranges: true
+    # Note the leading space because start year and end year will just be
+    # formatted one after the other.
+    end_year: " and all future years"
+    authors:
+      - name: Mathew Robinson
+        email: chasinglogic@gmail.com
+        ident: MIT
+    template: |
+      Copyright [year] [name of author]. All rights reserved. Use of
+      this source code is governed by the [ident] license that can be
+      found in the LICENSE file.
+```
+
+And a file with a created year of 2019 you'll get a copyright line like this:
+
+```
+Copyright (c) 2019 and all future years ...
+```
+
 #### comments
 
 The comments section is a list of comment configuration

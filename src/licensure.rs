@@ -257,7 +257,7 @@ mod test {
     use crate::template::test_context_with_range;
     use crate::{
         comments::LineComment,
-        template::{test_context, Template},
+        template::{Template, test_context},
     };
 
     #[test]
@@ -324,9 +324,11 @@ mod test {
         let result = l.get_replaces_replacement(&replaces, content, &header);
         eprintln!("{:?}", result);
         assert!(result.is_some());
-        assert!(result
-            .unwrap()
-            .eq("BEFORE// License 2024\n//\n// text\nAFTER"));
+        assert!(
+            result
+                .unwrap()
+                .eq("BEFORE// License 2024\n//\n// text\nAFTER")
+        );
     }
 
     #[test]
