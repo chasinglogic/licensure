@@ -29,8 +29,7 @@ use std::path::Path;
 use std::process;
 use std::process::Command;
 
-use chrono::offset::{Offset, Utc};
-use clap::{App, Arg};
+use clap::Parser;
 
 use config::DEFAULT_CONFIG;
 use licensure::Licensure;
@@ -40,11 +39,6 @@ mod config;
 mod licensure;
 mod template;
 mod utils;
-
-const VERSION: &str = env!("CARGO_PKG_VERSION");
-const AUTHORS: &str = env!("CARGO_PKG_AUTHORS");
-const ABOUT: &str = env!("CARGO_PKG_DESCRIPTION");
-const HOMEPAGE: &str = env!("CARGO_PKG_HOMEPAGE");
 
 // FIXME: Possible that we should remove this functionality.
 fn get_project_files() -> Vec<String> {
@@ -84,59 +78,43 @@ fn git_ls_files(extra_args: Vec<&str>) -> Vec<String> {
     }
 }
 
+#[derive(Parser)]
+#[command(version, about, long_about = None)]
+struct Cli {
+    #[arg(help = "Files to license, ignored if --project is supplied")]
+    files: Vec<String>,
+
+    #[arg(short, long, action = clap::ArgAction::Count)]
+    verbose: u8,
+
+    #[arg(short, long)]
+    in_place: bool,
+
+    #[arg(short, long)]
+    check: bool,
+
+    #[arg(
+        short,
+        long,
+        help = "A regex which will be used to determine what files to ignore."
+    )]
+    exclude: Option<String>,
+
+    #[arg(
+        short,
+        long,
+        help = "When specified will license the current project files as returned by git ls-files"
+    )]
+    project: bool,
+
+    #[arg(short, long, help = "Generate a default licensure config file")]
+    generate_config: bool,
+}
+
 fn main() {
-    let matches = App::new("licensure")
-        .version(VERSION)
-        .author("Mathew Robinson <chasinglogic@gmail.com>")
-        .about(
-            format!(
-                "{}
+    let matches = Cli::parse();
 
-{}
-
-More information is available at: {}",
-                ABOUT,
-                AUTHORS.replace(':', ", "),
-                HOMEPAGE
-            )
-            .as_str(),
-        )
-        .arg(
-            Arg::with_name("verbose")
-                .short("v")
-                .long("verbose")
-                .multiple(true),
-        )
-        .arg(Arg::with_name("in-place").short("i").long("in-place"))
-        .arg(
-            Arg::with_name("check")
-                .long("check")
-                .help("Checks if any file is not licensed with the given config"),
-        )
-        .arg(
-            Arg::with_name("exclude")
-                .short("e")
-                .long("exclude")
-                .takes_value(true)
-                .value_name("REGEX")
-                .help("A regex which will be used to determine what files to ignore."),
-        )
-        .arg(Arg::with_name("project").long("project").short("p").help(
-            "When specified will license the current project files as returned by git ls-files",
-        ))
-        .arg(
-            Arg::with_name("generate-config")
-                .long("generate-config")
-                .help("Generate a default licensure config file"),
-        )
-        .arg(
-            Arg::with_name("FILES")
-                .multiple(true)
-                .help("Files to license, ignored if --project is supplied"),
-        )
-        .get_matches();
-
-    match matches.occurrences_of("verbose") {
+    match matches.verbose {
         0 => (),
         x => simplelog::SimpleLogger::init(
             if x >= 3 {
@@ -151,13 +129,12 @@ More information is available at: {}",
                 .set_thread_level(simplelog::LevelFilter::Debug)
                 .set_target_level(simplelog::LevelFilter::Debug)
                 .set_location_level(simplelog::LevelFilter::Trace)
-                .set_time_offset(Utc.fix())
                 .build(),
         )
         .unwrap(),
     };
 
-    if matches.is_present("generate-config") {
+    if matches.generate_config {
         let mut f = match File::create(".licensure.yml") {
             Ok(f) => f,
             Err(e) => {
@@ -174,18 +151,13 @@ More information is available at: {}",
         process::exit(0);
     }
 
-    let files: Vec<String> = if matches.is_present("project") {
+    let files: Vec<String> = if matches.project {
         get_project_files()
+    } else if matches.files.len() > 0 {
+        matches.files
     } else {
-        matches
-            .values_of("FILES")
-            .map(|files| files.map(str::to_string).collect())
-            .unwrap_or_else(|| {
-                eprintln!(
-                    "ERROR: Must provide files to license either as matches or via --project"
-                );
-                process::exit(10);
-            })
+        eprintln!("ERROR: Must provide files to license either as arguments or via --project");
+        process::exit(10);
     };
 
     let mut config = match config::load_config() {
@@ -201,22 +173,22 @@ More information is available at: {}",
         }
     };
 
-    if let Some(exclude) = matches.value_of("exclude") {
-        config.add_exclude(exclude);
+    if let Some(exclude) = matches.exclude {
+        config.add_exclude(&exclude);
     }
 
-    if matches.is_present("in-place") {
+    if matches.in_place {
         config.change_in_place = true;
     }
 
-    let licensure = Licensure::new(config).with_check_mode(matches.is_present("check"));
+    let licensure = Licensure::new(config).with_check_mode(matches.check);
     match licensure.license_files(&files) {
         Err(e) => {
             println!("Failed to license files: {}", e);
             process::exit(1);
         }
         Ok(stats) => {
-            if matches.is_present("check")
+            if matches.check
                 && !(stats.files_not_licensed.is_empty()
                     && stats.files_needing_license_update.is_empty())
             {
