@@ -20,4 +20,5 @@ log = "0.4.26"
 simplelog = "0.11.2"
 ureq = { version = "2", features = ["json", "tls"] }
 textwrap = "0.14.2"
+ureq = { version = "3", features = ["json"] }
 serde_regex = "1.1.0"

@@ -16,6 +16,7 @@ use std::process::{self, Command};
 use chrono::prelude::*;
 use regex::Regex;
 use serde::{Deserialize, Deserializer};
+use ureq::http::StatusCode;
 
 use super::RegexList;
 use crate::template::{Authors, Context, Template};
@@ -63,7 +64,7 @@ struct SPDXLicenseInfo {
 
 fn fetch_template(ident: &str) -> String {
     let url = format!("https://spdx.org/licenses/{}.json", ident);
-    let response = match ureq::get(&url).call() {
+    let mut response = match ureq::get(&url).call() {
         Ok(r) => r,
         Err(e) => {
             println!("Failed to fetch license template from SPDX: {}", e);
@@ -72,14 +73,14 @@ fn fetch_template(ident: &str) -> String {
     };
 
     match response.status() {
-        404 => {
+        StatusCode::BAD_REQUEST => {
             eprintln!(
                 "{} does not appear to be a valid SPDX identifier, go to https://spdx.org/licenses/ to view a list of valid identifiers",
                 ident
             );
             process::exit(1)
         }
-        200 => (),
+        StatusCode::OK => (),
         _ => {
             eprintln!(
                 "Failed to fetch license template from SPDX for {}: {:?}",
@@ -90,7 +91,7 @@ fn fetch_template(ident: &str) -> String {
         }
     }
 
-    let license_info: SPDXLicenseInfo = match response.into_json() {
+    let license_info: SPDXLicenseInfo = match response.body_mut().read_json() {
         Ok(json) => json,
         Err(err) => {
             eprintln!("Failed to deserialize SPDX JSON: {}", err);
@@ -323,5 +324,15 @@ template: "some license"
             "Expected to have a RegexList for files but had: {:?}",
             test.files
         );
+    }
+
+    #[test]
+    fn test_fetch_common_templates() {
+        let identifiers = vec!["MIT", "GPL-3.0", "Apache-2.0"];
+
+        for identifier in identifiers.iter() {
+            let header = fetch_template(identifier);
+            assert_ne!(header, "");
+        }
     }
 }
