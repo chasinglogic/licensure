@@ -73,7 +73,7 @@ fn fetch_template(ident: &str) -> String {
 
     match response.status() {
         404 => {
-            println!(
+            eprintln!(
                 "{} does not appear to be a valid SPDX identifier, go to https://spdx.org/licenses/ to view a list of valid identifiers",
                 ident
             );
@@ -81,7 +81,7 @@ fn fetch_template(ident: &str) -> String {
         }
         200 => (),
         _ => {
-            println!(
+            eprintln!(
                 "Failed to fetch license template from SPDX for {}: {:?}",
                 ident,
                 response.status()
@@ -93,7 +93,7 @@ fn fetch_template(ident: &str) -> String {
     let license_info: SPDXLicenseInfo = match response.into_json() {
         Ok(json) => json,
         Err(err) => {
-            println!("Failed to deserialize SPDX JSON: {}", err);
+            eprintln!("Failed to deserialize SPDX JSON: {}", err);
             process::exit(1);
         }
     };
