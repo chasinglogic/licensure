@@ -256,12 +256,18 @@ mod tests {
         let template = Template::new("License [year]\n\ntext", context);
         let commenter = LineComment::new("#", None);
         let rgx = template.outdated_license_pattern(&commenter);
-        let expected = Regex::new("\\# License [0-9]{4}(, [0-9]{4})?\n\\#\n\\# text\n")
+        let expected = Regex::new("\\# License [0-9]{4}(, [0-9]{4})*\n\\#\n\\# text\n")
             .expect("This should have compiled?");
 
         assert_eq!(rgx.to_string(), expected.to_string());
         assert!(rgx.is_match(
             r#"# License 2020
+#
+# text
+"#
+        ));
+        assert!(rgx.is_match(
+            r#"# License 2019, 2021, 2024
 #
 # text
 "#
@@ -274,12 +280,17 @@ mod tests {
         let template = Template::new("License [year]\n\ntext", context);
         let commenter = LineComment::new("#", None);
         let rgx = template.outdated_license_trimmed_pattern(&commenter);
-        let expected = Regex::new("\\# License [0-9]{4}(, [0-9]{4})?\n\\#\n\\# text")
+        let expected = Regex::new("\\# License [0-9]{4}(, [0-9]{4})*\n\\#\n\\# text")
             .expect("This should have compiled?");
 
         assert_eq!(rgx.to_string(), expected.to_string());
         assert!(rgx.is_match(
             r#"# License 2020
+#
+# text"#
+        ));
+        assert!(rgx.is_match(
+            r#"# License 2019, 2021, 2024
 #
 # text"#
         ));
