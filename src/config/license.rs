@@ -113,6 +113,10 @@ fn default_dynamic_year_ranges() -> bool {
     false
 }
 
+fn default_git_year_list() -> bool {
+    false
+}
+
 #[derive(Deserialize, Debug)]
 pub struct Config {
     files: FileMatcher,
@@ -124,6 +128,8 @@ pub struct Config {
     start_year: Option<String>,
     #[serde(default = "default_dynamic_year_ranges")]
     use_dynamic_year_ranges: bool,
+    #[serde(default = "default_git_year_list")]
+    use_git_year_list: bool,
 
     template: Option<String>,
     auto_template: Option<bool>,
@@ -159,7 +165,20 @@ impl Config {
             }
         };
 
-        let (end_year, start_year) = if self.use_dynamic_year_ranges {
+        let (end_year, start_year) = if self.use_git_year_list {
+            let mut all_years: Vec<String> = get_git_years_for_file(filename)
+                .into_iter()
+                .collect::<std::collections::HashSet<_>>()
+                .into_iter()
+                .collect();
+            all_years.sort();
+
+            let year_list = self
+                .end_year
+                .clone()
+                .unwrap_or_else(|| all_years.join(", "));
+            (Some(year_list), None)
+        } else if self.use_dynamic_year_ranges {
             let git_log_dates = get_git_years_for_file(filename);
             let git_end_year = git_log_dates.first();
             let git_start_year = git_log_dates.last();

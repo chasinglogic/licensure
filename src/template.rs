@@ -109,8 +109,8 @@ pub struct Template {
 // in the license text.
 const INTERMEDIATE_YEAR_TOKEN: &str = "@YR@";
 
-// Matches any full 4-digit year
-const YEAR_RE: &str = "[0-9]{4}(, [0-9]{4})?";
+// Matches any full 4-digit year, or a comma-separated list of years
+const YEAR_RE: &str = "[0-9]{4}(, [0-9]{4})*";
 
 impl Template {
     pub fn new(template: &str, context: Context) -> Template {

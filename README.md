@@ -353,6 +353,37 @@ And a file with a created year of 2019 you'll get a copyright line like this:
 Copyright (c) 2019 and all future years ...
 ```
 
+###### Automated year lists
+
+If you want the copyright to enumerate every individual year the file was
+modified (rather than just a start–end range) you can use the
+`use_git_year_list: true` setting. This will use `git` commit information to
+collect all years in which the file was committed and list them in ascending
+order, deduplicated.
+
+```yaml
+licenses:
+  - files: any
+    use_git_year_list: true
+    authors:
+      - name: Mathew Robinson
+        email: chasinglogic@gmail.com
+    ident: MIT
+    template: |
+      Copyright [year] [name of author]. All rights reserved. Use of
+      this source code is governed by the [ident] license that can be
+      found in the LICENSE file.
+```
+
+For a file committed in 2019, 2021, and 2024 you'll get a copyright line like:
+
+```
+Copyright 2019, 2021, 2024 ...
+```
+
+Note that `use_git_year_list` and `use_dynamic_year_ranges` are mutually
+exclusive; if both are set `use_git_year_list` takes precedence.
+
 #### comments
 
 The comments section is a list of comment configuration
