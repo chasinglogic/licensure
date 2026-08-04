@@ -355,11 +355,11 @@ Copyright (c) 2019 and all future years ...
 
 ###### Automated year lists
 
-If you want the copyright to enumerate every individual year the file was
-modified (rather than just a start–end range) you can use the
-`use_git_year_list: true` setting. This will use `git` commit information to
-collect all years in which the file was committed and list them in ascending
-order, deduplicated.
+If you want the copyright to enumerate every year in which a file was modified,
+rather than showing only its first and last years, enable
+`use_git_year_list: true`. Licensure reads the file's commit history from Git,
+removes duplicate years, sorts them in ascending order, and inserts the
+comma-separated list in place of `[year]`.
 
 ```yaml
 licenses:
@@ -375,14 +375,20 @@ licenses:
       found in the LICENSE file.
 ```
 
-For a file committed in 2019, 2021, and 2024 you'll get a copyright line like:
+For example, if a file has commits from 2019, 2021, and 2024, the rendered
+copyright line will be:
 
 ```
 Copyright 2019, 2021, 2024 ...
 ```
 
-Note that `use_git_year_list` and `use_dynamic_year_ranges` are mutually
-exclusive; if both are set `use_git_year_list` takes precedence.
+Repeated commits within a year do not cause that year to be repeated. Setting
+`end_year` explicitly overrides the Git-derived list, while `start_year` is not
+used in year-list mode.
+
+Year-list mode takes precedence if both `use_git_year_list` and
+`use_dynamic_year_ranges` are enabled. In general, configure only one of these
+options for a license entry so its intended year format is unambiguous.
 
 #### comments
 
